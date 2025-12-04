@@ -1,8 +1,8 @@
-*! yaml_unicef_api_example.do
-*! Example: Working with UNICEF SDMX API Metadata in Stata
-*! Demonstrates using yaml to read and process indicator/dataflow metadata
+*! yaml_sj_article_examples.do
+*! Do-file reproducing examples from the Stata Journal article
+*! "Reading and writing YAML files in Stata"
 *! Author: João Pedro Azevedo
-*! Date: December 2024
+*! Date: December 2025
 
 * ==============================================================================
 * INTRODUCTION
@@ -30,6 +30,7 @@
 
 clear all
 set more off
+set linesize 80
 cap log close
 
 * Set working directory
@@ -39,7 +40,7 @@ cd "D:\jazevedo\GitHub\ados\yaml"
 run "src/y/yaml.ado"
 
 * Start log
-log using "examples/yaml_unicef_api_example.log", replace text
+log using "examples/yaml_sj_article_examples.log", replace text
 
 * Display header
 display _n

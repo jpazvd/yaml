@@ -29,10 +29,14 @@ SUBCOMMANDS
     yaml clear     - Clear YAML data from memory
 
 FILES
-    yaml.ado                - Main command file
-    yaml.sthlp              - Help documentation
-    yaml_paper_examples.do  - Do-file reproducing Stata Journal article examples
-    yaml_paper_examples.log - Log file from example execution
+    yaml.ado                    - Main command file
+    yaml.sthlp                  - Help documentation
+    
+    Example files (in examples/):
+    yaml_sj_article_examples.do  - Do-file reproducing Stata Journal article examples
+    yaml_sj_article_examples.log - Log file from example execution
+    yaml_basic_examples.do       - Basic examples for all yaml subcommands
+    yaml_basic_examples.log      - Log file from basic examples
 
     Sample YAML files (in examples/data/):
     config.yaml             - Sample project configuration

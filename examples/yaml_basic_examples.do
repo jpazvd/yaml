@@ -1,8 +1,7 @@
-*! yaml_paper_examples.do
-*! Do-file reproducing all examples from the Stata Journal article
-*! "Reading and writing YAML files in Stata"
+*! yaml_basic_examples.do
+*! Basic examples demonstrating yaml command subcommands
 *! Author: João Pedro Azevedo
-*! Date: December 2024
+*! Date: December 2025
 
 * ==============================================================================
 * SETUP
@@ -10,6 +9,7 @@
 
 clear all
 set more off
+set linesize 80
 cap log close
 
 * Set working directory to the yaml repository root
@@ -19,7 +19,7 @@ cd "D:\jazevedo\GitHub\ados\yaml"
 run "src/y/yaml.ado"
 
 * Start log file (will be saved in the examples folder)
-log using "examples/yaml_paper_examples.log", replace text
+log using "examples/yaml_basic_examples.log", replace text
 
 * Display header
 display _n
