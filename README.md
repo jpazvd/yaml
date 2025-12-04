@@ -1,1 +1,419 @@
-# yaml
+# yaml: Stata module for YAML file processing
+
+[![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+## Description
+
+`yaml` is a Stata command for reading, writing, and manipulating YAML configuration files. It provides a unified interface with eight subcommands that enable Stata users to integrate YAML-based workflows into their data pipelines.
+
+The command implements a JSON-compatible subset of YAML 1.2, covering the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
+
+### Key Features
+
+- **Read YAML files** into Stata's data structure or frames
+- **Write YAML files** from Stata datasets or scalars
+- **Query values** using hierarchical key paths
+- **Validate configurations** with required keys and type checking
+- **Multiple frame support** (Stata 16+) for managing multiple configurations
+
+## Installation
+
+### From SSC (when available)
+
+```stata
+ssc install yaml
+```
+
+### Manual Installation
+
+Copy `yaml.ado` and `yaml.sthlp` from `src/y/` to your personal ado directory:
+
+```stata
+adopath
+* Copy files to the PERSONAL directory shown
+```
+
+## Quick Start
+
+```stata
+* Read a YAML configuration file
+yaml read using config.yaml, replace
+
+* View the structure
+yaml describe
+
+* Get a specific value
+yaml get database:host
+return list
+
+* Validate required keys
+yaml validate, required(name version database)
+
+* Write modified configuration
+yaml write using output.yaml, replace
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              yaml.ado                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐                │
+│   │  read   │    │  write  │    │ describe │    │  list   │                │
+│   └────┬────┘    └────┬────┘    └────┬─────┘    └────┬────┘                │
+│        │              │              │               │                      │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐    ┌───┴────┐                 │
+│   │   get   │    │validate │    │  frames  │    │  clear │                 │
+│   └─────────┘    └─────────┘    └──────────┘    └────────┘                 │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                         Internal Storage                                     │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │  Dataset/Frame Structure:                                          │     │
+│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
+│  │  │   key    │   value    │ level │   parent   │   type   │        │     │
+│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
+│  │  │ str244   │ str2045    │ int   │ str244     │ str32    │        │     │
+│  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `yaml read` | Parse YAML file into Stata dataset or frame |
+| `yaml write` | Export Stata data to YAML format |
+| `yaml describe` | Display structure summary of loaded YAML |
+| `yaml list` | List keys, values, or children |
+| `yaml get` | Retrieve specific key values |
+| `yaml validate` | Check required keys and value types |
+| `yaml frames` | List YAML data stored in frames (Stata 16+) |
+| `yaml clear` | Clear YAML data from memory or frames |
+
+## Syntax
+
+### yaml read
+
+```stata
+yaml read using filename.yaml [, options]
+```
+
+**Options:**
+- `replace` - Replace existing data
+- `frame(name)` - Load into named frame (Stata 16+)
+- `locals` - Store values as return locals
+- `scalars` - Store numeric values as scalars
+- `prefix(string)` - Prefix for local/scalar names (default: `yaml_`)
+- `verbose` - Display parsing details
+
+### yaml write
+
+```stata
+yaml write using filename.yaml [, options]
+```
+
+**Options:**
+- `replace` - Overwrite existing file
+- `frame(name)` - Write from named frame
+- `scalars(list)` - Write specified scalars
+- `indent(#)` - Indentation spaces (default: 2)
+- `header(string)` - Custom header comment
+- `verbose` - Display write progress
+
+### yaml get
+
+```stata
+yaml get keyname [, options]
+yaml get parent:child [, options]
+```
+
+**Options:**
+- `frame(name)` - Read from named frame
+- `attributes(list)` - Specific attributes to retrieve
+- `quiet` - Suppress output
+
+**Returns:**
+- `r(found)` - 1 if key found
+- `r(n_attrs)` - Number of attributes
+- `r(key)` - Key name
+- `r(parent)` - Parent name (if colon syntax used)
+- `r(attr_name)` - Value for each attribute
+
+### yaml list
+
+```stata
+yaml list [keyname] [, options]
+```
+
+**Options:**
+- `keys` - Show key names
+- `values` - Show values
+- `children` - List child keys only
+- `level(#)` - Filter by nesting level
+- `frame(name)` - Read from named frame
+
+### yaml validate
+
+```stata
+yaml validate [, options]
+```
+
+**Options:**
+- `required(keylist)` - Check that keys exist
+- `types(key:type ...)` - Validate key types
+- `frame(name)` - Validate named frame
+- `quiet` - Suppress output, only set return values
+
+**Returns:**
+- `r(valid)` - 1 if validation passed
+- `r(n_errors)` - Number of errors
+- `r(n_warnings)` - Number of warnings
+- `r(missing_keys)` - List of missing required keys
+- `r(type_errors)` - List of type validation failures
+
+### yaml describe
+
+```stata
+yaml describe [, level(#) frame(name)]
+```
+
+### yaml frames
+
+```stata
+yaml frames [, detail]
+```
+
+### yaml clear
+
+```stata
+yaml clear [, all frame(name)]
+```
+
+## Data Model
+
+### Storage Structure
+
+YAML data is stored in a flat dataset with hierarchical references:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
+| `value` | str2045 | The value associated with the key |
+| `level` | int | Nesting depth (0 = root level) |
+| `parent` | str244 | Parent key for hierarchical lookups |
+| `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
+
+### Key Naming Convention
+
+Keys are flattened using underscores to represent hierarchy:
+
+```yaml
+# YAML input:
+indicators:
+  CME_MRY0T4:
+    label: Under-five mortality rate
+    unit: Deaths per 1000 live births
+```
+
+```
+# Stored as:
+key                              value                         parent                  type
+─────────────────────────────────────────────────────────────────────────────────────────────
+indicators                       (empty)                       (empty)                 parent
+indicators_CME_MRY0T4            (empty)                       indicators              parent
+indicators_CME_MRY0T4_label      Under-five mortality rate     indicators_CME_MRY0T4   string
+indicators_CME_MRY0T4_unit       Deaths per 1000 live births   indicators_CME_MRY0T4   string
+```
+
+### List Item Storage
+
+YAML lists are stored as indexed separate rows:
+
+```yaml
+# YAML input:
+countries:
+  - BRA
+  - ARG
+  - CHL
+```
+
+```
+# Stored as:
+key             value   parent      type
+────────────────────────────────────────────
+countries       (empty) (empty)     parent
+countries_1     BRA     countries   list_item
+countries_2     ARG     countries   list_item
+countries_3     CHL     countries   list_item
+```
+
+## Supported YAML Features
+
+### ✅ Supported
+
+| Feature | Example |
+|---------|---------|
+| Key-value pairs | `key: value` |
+| Nested mappings | Indentation-based hierarchy |
+| Comments | `# This is a comment` |
+| Strings | `name: "quoted"` or `name: unquoted` |
+| Numbers | `count: 100`, `rate: 3.14` |
+| Booleans | `debug: true`, `verbose: false` |
+| Null values | `empty:` or `empty: null` |
+| Lists/Sequences | `- item1`, `- item2` |
+
+### ❌ Not Supported
+
+| Feature | Reason |
+|---------|--------|
+| Anchors & Aliases | `&anchor`, `*alias` - Complex to implement |
+| Multi-line blocks | `\|`, `>` - Requires special handling |
+| Flow style | `{a: 1, b: 2}`, `[1, 2, 3]` - JSON-like inline |
+| Custom tags | `!!map`, `!!seq` - Advanced YAML |
+
+## Version Requirements
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| Basic functionality | Stata 14.0 |
+| Frame support | Stata 16.0 |
+
+## Examples
+
+### Reading and Querying
+
+```stata
+* Load configuration
+yaml read using pipeline_config.yaml, replace
+
+* Get nested value using colon syntax
+yaml get database:connection_string
+local conn = r(connection_string)
+
+* List all keys at root level
+yaml list, keys level(0)
+```
+
+### Validation
+
+```stata
+* Check required configuration keys
+yaml validate, required(name version api_key)
+
+* Validate with type checking
+yaml validate, types(port:numeric debug:boolean)
+
+if (r(valid) == 0) {
+    di as error "Invalid configuration"
+    exit 198
+}
+```
+
+### Working with Frames (Stata 16+)
+
+```stata
+* Load multiple configurations
+yaml read using dev.yaml, frame(dev)
+yaml read using prod.yaml, frame(prod)
+
+* Query from specific frame
+yaml get host, frame(prod)
+
+* List loaded YAML frames
+yaml frames, detail
+
+* Clear specific frame
+yaml clear, frame(dev)
+```
+
+### Round-trip: Read and Write
+
+```stata
+* Read configuration
+yaml read using original.yaml, replace
+
+* Modify values
+replace value = "new_value" if key == "settings_timeout"
+
+* Write back
+yaml write using modified.yaml, replace
+```
+
+### Working with Lists
+
+```stata
+* Read YAML with lists
+yaml read using countries.yaml, replace
+
+* List items in a list
+yaml list countries, keys children
+
+* Access individual list items
+yaml get countries
+* Returns: r(1)="BRA" r(2)="ARG" r(3)="CHL"
+```
+
+## Use Cases
+
+- **Pipeline Configuration**: Database connections, API endpoints, timeouts
+- **Metadata Management**: Indicator definitions, variable labels, units
+- **Cross-language Workflows**: Share configurations with R, Python, GitHub Actions
+- **Reproducible Research**: Version-controlled configuration files
+- **Multi-environment Support**: Dev/staging/prod configurations in separate frames
+
+## Design Principles
+
+1. **YAML 1.2 Subset**: Implements the most commonly used YAML features that cover 95%+ of configuration use cases.
+
+2. **JSON Compatibility**: The supported subset is fully JSON-compatible, enabling easy data exchange.
+
+3. **Stata-Native**: Pure Stata implementation using `file read/write` - no external dependencies.
+
+4. **Hierarchical Storage**: Flat storage with parent references enables both simple key-value access and hierarchical queries.
+
+5. **Frame Support**: Optional frame storage keeps YAML data separate from working datasets.
+
+6. **Validation First**: Built-in validation ensures configuration correctness before pipeline execution.
+
+## Repository Structure
+
+```
+yaml/
+├── README.md              # This file
+├── .gitignore
+├── src/y/
+│   ├── yaml.ado           # Main command (v1.2.0)
+│   └── yaml.sthlp         # Stata help file
+├── examples/              # Examples and test files
+│   ├── README.md
+│   ├── test_yaml.do       # Main example script
+│   ├── data/              # Sample YAML files
+│   └── logs/              # Output logs from examples
+└── paper/                 # Manuscript
+    └── main.pdf           # Compiled paper
+```
+
+## Suggested Citation
+
+Azevedo, João Pedro. 2025. "yaml: Stata module for YAML file processing." 
+Statistical Software Components, Boston College Department of Economics.
+
+## Author
+
+**João Pedro Azevedo**  
+[jazevedo@worldbank.org](mailto:jazevedo@worldbank.org)  
+World Bank  
+
+## License
+
+MIT License
+
+## License
+
+MIT License
