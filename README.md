@@ -1,13 +1,14 @@
 # yaml: Stata module for YAML file processing
 
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
+[![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## Description
 
-`yaml` is a Stata command for reading, writing, and manipulating YAML configuration files. It provides a unified interface with eight subcommands that enable Stata users to integrate YAML-based workflows into their data pipelines.
+`yaml` is a Stata command for reading, writing, and manipulating YAML configuration files. It provides a unified interface with nine subcommands that enable Stata users to integrate YAML-based workflows into their data pipelines.
 
-The command implements a JSON-compatible subset of YAML 1.2, covering the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
+The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
 ### Key Features
 
@@ -61,13 +62,17 @@ yaml write using output.yaml, replace
 │                              yaml.ado                                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│   ┌─────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐                │
-│   │  read   │    │  write  │    │ describe │    │  list   │                │
-│   └────┬────┘    └────┬────┘    └────┬─────┘    └────┬────┘                │
-│        │              │              │               │                      │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐    ┌───┴────┐                 │
-│   │   get   │    │validate │    │  frames  │    │  clear │                 │
-│   └─────────┘    └─────────┘    └──────────┘    └────────┘                 │
+│   ┌─────────┐    ┌─────────┐    ┌──────────┐                               │
+│   │  read   │    │  write  │    │ describe │                               │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
+│        │              │              │                                       │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
+│   │  list   │    │   get   │    │ validate │                               │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
+│        │              │              │                                       │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
+│   │   dir   │    │  frames │    │  clear   │                               │
+│   └─────────┘    └─────────┘    └──────────┘                               │
 │                                                                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                         Internal Storage                                     │
@@ -93,7 +98,8 @@ yaml write using output.yaml, replace
 | `yaml list` | List keys, values, or children |
 | `yaml get` | Retrieve specific key values |
 | `yaml validate` | Check required keys and value types |
-| `yaml frames` | List YAML data stored in frames (Stata 16+) |
+| `yaml dir` | List all YAML data in memory (dataset and frames) |
+| `yaml frames` | List only YAML frames in memory (Stata 16+) |
 | `yaml clear` | Clear YAML data from memory or frames |
 
 ## Syntax
@@ -183,11 +189,35 @@ yaml validate [, options]
 yaml describe [, level(#) frame(name)]
 ```
 
+### yaml dir
+
+```stata
+yaml dir [, detail]
+```
+
+Lists all YAML data currently in memory:
+- **Current dataset** - if it contains YAML structure (key, value, level, parent, type variables)
+- **YAML frames** - all frames with `yaml_` prefix (Stata 16+)
+
+**Options:**
+- `detail` - Show number of entries and source file for each
+
+**Detection:**
+- YAML data is identified by the `_dta[yaml_source]` characteristic set by `yaml read`
+- Datasets with YAML structure but unknown source are also reported
+
 ### yaml frames
 
 ```stata
 yaml frames [, detail]
 ```
+
+Lists only YAML frames in memory. Requires Stata 16+.
+
+**Options:**
+- `detail` - Show number of entries and source file for each frame
+
+**Use case:** When you only need to see frames, not the current dataset.
 
 ### yaml clear
 
@@ -253,29 +283,35 @@ countries_2     ARG     countries   list_item
 countries_3     CHL     countries   list_item
 ```
 
-## Supported YAML Features
+## YAML 1.2 Compliance
 
-### ✅ Supported
+This command implements the **JSON Schema** subset of YAML 1.2 as defined in [Chapter 10.2](https://yaml.org/spec/1.2.2/#json-schema) of the YAML 1.2 Specification. This is the recommended schema for "interoperability and consistency" according to the specification.
 
-| Feature | Example |
-|---------|---------|
-| Key-value pairs | `key: value` |
-| Nested mappings | Indentation-based hierarchy |
-| Comments | `# This is a comment` |
-| Strings | `name: "quoted"` or `name: unquoted` |
-| Numbers | `count: 100`, `rate: 3.14` |
-| Booleans | `debug: true`, `verbose: false` |
-| Null values | `empty:` or `empty: null` |
-| Lists/Sequences | `- item1`, `- item2` |
+### ✅ Supported (YAML 1.2 JSON Schema)
 
-### ❌ Not Supported
+| Feature | YAML 1.2 Reference | Example |
+|---------|-------------------|---------|
+| Mappings | [Chapter 8.2.1](https://yaml.org/spec/1.2.2/#821-block-mappings) | `key: value` |
+| Nested mappings | [Chapter 8.2](https://yaml.org/spec/1.2.2/#82-block-collection-styles) | Indentation-based hierarchy |
+| Block sequences | [Chapter 8.2.2](https://yaml.org/spec/1.2.2/#822-block-sequences) | `- item1`, `- item2` |
+| Comments | [Chapter 6.5](https://yaml.org/spec/1.2.2/#65-comment-indicator) | `# This is a comment` |
+| Strings | [Chapter 10.2.1.1](https://yaml.org/spec/1.2.2/#null-1) | `name: "quoted"` or `name: unquoted` |
+| Integers | [Chapter 10.2.1.2](https://yaml.org/spec/1.2.2/#integer) | `count: 100` |
+| Floats | [Chapter 10.2.1.3](https://yaml.org/spec/1.2.2/#floating-point) | `rate: 3.14` |
+| Booleans | [Chapter 10.2.1.4](https://yaml.org/spec/1.2.2/#boolean) | `debug: true`, `verbose: false` |
+| Null | [Chapter 10.2.1.1](https://yaml.org/spec/1.2.2/#null-1) | `empty:` or `empty: null` |
 
-| Feature | Reason |
-|---------|--------|
-| Anchors & Aliases | `&anchor`, `*alias` - Complex to implement |
-| Multi-line blocks | `\|`, `>` - Requires special handling |
-| Flow style | `{a: 1, b: 2}`, `[1, 2, 3]` - JSON-like inline |
-| Custom tags | `!!map`, `!!seq` - Advanced YAML |
+### ❌ Not Supported (Advanced YAML 1.2)
+
+These features are part of the full YAML 1.2 specification but are intentionally excluded to maintain simplicity and robustness:
+
+| Feature | YAML 1.2 Reference | Reason |
+|---------|-------------------|--------|
+| Anchors & Aliases | [Chapter 7.1](https://yaml.org/spec/1.2.2/#71-alias-nodes) | `&anchor`, `*alias` - Complex reference handling |
+| Block scalars | [Chapter 8.1](https://yaml.org/spec/1.2.2/#81-block-scalar-styles) | `\|`, `>` - Multi-line literal/folded styles |
+| Flow collections | [Chapter 7.4](https://yaml.org/spec/1.2.2/#74-flow-collection-styles) | `{a: 1}`, `[1, 2]` - JSON-like inline syntax |
+| Tags | [Chapter 6.9](https://yaml.org/spec/1.2.2/#69-tag) | `!!map`, `!!seq` - Type annotations |
+| Multiple documents | [Chapter 9.2](https://yaml.org/spec/1.2.2/#92-streams) | `---` document separators |
 
 ## Version Requirements
 
@@ -325,8 +361,8 @@ yaml read using prod.yaml, frame(prod)
 * Query from specific frame
 yaml get host, frame(prod)
 
-* List loaded YAML frames
-yaml frames, detail
+* List all YAML data in memory
+yaml dir, detail
 
 * Clear specific frame
 yaml clear, frame(dev)
@@ -369,15 +405,15 @@ yaml get countries
 
 ## Design Principles
 
-1. **YAML 1.2 Subset**: Implements the most commonly used YAML features that cover 95%+ of configuration use cases.
+1. **YAML 1.2 Compliance**: Implements the JSON Schema (Chapter 10.2) of the [YAML 1.2 Specification](https://yaml.org/spec/1.2.2/), which covers 95%+ of configuration use cases.
 
-2. **JSON Compatibility**: The supported subset is fully JSON-compatible, enabling easy data exchange.
+2. **JSON Compatibility**: Per YAML 1.2's design goal, the supported subset ensures that valid JSON is also valid YAML (Chapter 1.2 of the specification).
 
-3. **Stata-Native**: Pure Stata implementation using `file read/write` - no external dependencies.
+3. **Stata-Native**: Pure Stata implementation using `file read/write` - no external dependencies (Python, LibYAML, etc.).
 
-4. **Hierarchical Storage**: Flat storage with parent references enables both simple key-value access and hierarchical queries.
+4. **Hierarchical Storage**: Flat storage with parent references enables both simple key-value access and hierarchical queries, following the YAML representation model (Chapter 3.2.1).
 
-5. **Frame Support**: Optional frame storage keeps YAML data separate from working datasets.
+5. **Frame Support**: Optional frame storage keeps YAML data separate from working datasets (Stata 16+).
 
 6. **Validation First**: Built-in validation ensures configuration correctness before pipeline execution.
 
@@ -388,8 +424,8 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.2.0)
-│   └── yaml.sthlp         # Stata help file
+│   ├── yaml.ado           # Main command (v1.3.0)
+│   └── yaml.sthlp          # Stata help file
 ├── examples/              # Examples and test files
 │   ├── README.md
 │   ├── test_yaml.do       # Main example script
@@ -407,12 +443,14 @@ Statistical Software Components, Boston College Department of Economics.
 ## Author
 
 **João Pedro Azevedo**  
-[jazevedo@worldbank.org](mailto:jazevedo@worldbank.org)  
-World Bank  
+[jpazevedo@unicef.org](mailto:jpazevedo@unicef.org)  
+UNICEF  
 
-## License
+## References
 
-MIT License
+- **YAML 1.2 Specification**: Ben-Kiki, O., Evans, C., & döt Net, I. (2021). *YAML Ain't Markup Language (YAML™) Version 1.2* (Revision 1.2.2). https://yaml.org/spec/1.2.2/
+- **JSON Schema**: YAML 1.2 Specification, Chapter 10.2. https://yaml.org/spec/1.2.2/#json-schema
+- **YAML Official Site**: https://yaml.org/
 
 ## License
 

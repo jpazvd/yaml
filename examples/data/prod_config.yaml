@@ -1,0 +1,23 @@
+# Production environment configuration
+# Used in Stata Journal article examples for multi-file comparison
+
+environment: production
+version: 1.0.0
+
+database:
+  host: db.production.example.com
+  port: 5432
+  name: prod_analytics
+  user: prod_user
+  
+api:
+  endpoint: https://api.production.example.com
+  timeout: 30
+  
+logging:
+  level: info
+  file: /var/log/analytics/prod.log
+  
+features:
+  cache_enabled: true
+  debug_mode: false
