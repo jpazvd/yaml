@@ -1,0 +1,760 @@
+% yamlstata.tex — Stata Journal insert
+% To be included from main.tex provided by sjlatex
+
+\inserttype[st0001]{article}
+
+\author{J. P. Azevedo}{%
+Jo\~ao Pedro Azevedo\\
+UNICEF, Division of Data, Analytics, Planning and Monitoring\\
+New York, USA\\
+\texttt{jpazevedo@unicef.org}
+}
+
+\title[Reading and writing YAML in Stata]{Reading and writing YAML files in Stata:\\
+A lightweight framework for reproducible and cross-platform analytics}
+
+% \sjSetDOI{!!}  % Filled in by Stata Press
+
+\maketitle
+
+\begin{abstract}
+YAML (``YAML Ain't Markup Language'') is a widely used, human-readable data-serialization standard that underpins configuration management in modern analytical ecosystems, including GitHub Actions, R and Python pipelines, Jupyter workflows, and cloud-based orchestration tools. Although Stata increasingly participates in multi-language, reproducible workflows, it lacks native support for reading or writing YAML. This article introduces \texttt{yaml}, a unified Stata command that provides nine subcommands for parsing, generating, querying, and validating YAML files. The command enables users to import structured configuration files into datasets or frames, work with metadata programmatically, and export updated configurations back to YAML. The implementation is lightweight, dependency-free, and targets the JSON-compatible subset of the YAML~1.2 specification. We illustrate applications in indicator metadata management using the UNICEF SDMX API, YAML-driven survey microdata harmonization, and configuration validation in automated pipelines. We conclude with recommendations for integrating YAML-based workflows into Stata-centered data production systems.
+\keywords{\inserttag, yaml, reproducible research, metadata, configuration management, cross-platform workflows}
+\end{abstract}
+
+\section{Introduction}
+
+YAML (``YAML Ain’t Markup Language'') is a widely used, human-readable data-serialization format designed for configuration files, structured metadata, and declarative workflows \citep{YAML12}. It is now ubiquitous across analytical and data-engineering ecosystems, including documentation and reporting frameworks (R Markdown, Quarto), automation platforms (GitHub Actions and other CI pipelines), and cloud-orchestration tools. To our knowledge, Stata currently lacks any general-purpose command for parsing or generating YAML files.
+
+As empirical workflows increasingly span multiple programming environments, the absence of YAML support restricts Stata’s ability to participate in modern reproducible pipelines. Without a mechanism for reading or writing YAML, Stata scripts typically hard-code configuration values directly into do-files, leading to duplicated logic, inconsistent parameter settings, and added maintenance burden. Although Stata can interface with external languages such as Python, relying on external interpreters introduces dependency management challenges and reduces portability, especially in secure or server-based environments where Python is unavailable. A native Stata solution is therefore essential for fully reproducible workflows.
+
+This article introduces \texttt{yaml}, a unified Stata command that enables users to read, write, query, and validate YAML configuration files entirely within Stata. The command supports a pragmatic, JSON-compatible subset of YAML 1.2 suitable for most analytical workflows encountered in practice. By allowing Stata to consume and emit the same configuration artifacts used by R, Python, and automation systems, \texttt{yaml} positions Stata as a first-class participant in cross-platform reproducible analytics.
+
+The remainder of the article is organized as follows. Section~\ref{sec:motivation} motivates the need for YAML interoperability in Stata workflows. Section~\ref{sec:architecture} describes the command architecture and data model. Section~\ref{sec:subcommands} presents each subcommand in detail. Section~\ref{sec:applications} illustrates applications in data-production pipelines. Section~\ref{sec:discussion} discusses limitations and extensions, and Section~\ref{sec:conclusions} concludes.
+
+
+\section{Motivation}
+\label{sec:motivation}
+
+\subsection{YAML in modern analytical workflows}
+
+YAML has become central to many data science and engineering ecosystems because it supports nested key--value structures, lists and arrays, free-form metadata, and simple type conventions (numbers, booleans, and strings) in a highly readable format. The emphasis on clean, well-structured data \citep{wickham14} and reproducible dynamic documents \citep{xie14} has further increased demand for human-readable configuration formats. YAML is widely used for
+\begin{itemize}
+    \item GitHub Actions workflows and continuous-integration pipelines;
+    \item R Markdown and Quarto site configuration files;
+    \item Python experiment configuration and orchestration scripts;
+    \item agent and workflow definitions for large language model systems; and
+    \item cloud-infrastructure and container-orchestration templates.
+\end{itemize}
+
+For Stata users operating in cross-tool workflows, the lack of YAML support creates friction:
+\begin{itemize}
+    \item metadata and configuration must be duplicated or manually ported into Stata;
+    \item Stata cannot easily consume configuration files produced by other tools;
+    \item it becomes difficult to use Stata in automated systems that expect YAML;
+    \item reproducibility suffers because configuration logic is fragmented across languages.
+\end{itemize}
+
+\subsection{Stata in multi-language reproducible pipelines}
+
+Many contemporary research teams maintain mixed-language pipelines invoking Stata for microdata transformations and estimation, R for visualization and reporting, Python for simulation and orchestration, and Git-based platforms for version control and automation \citep[see][for foundational principles of Stata workflows]{wdaus}. Best practices for managing code and data in such settings emphasize automation, version control, and clear directory structures \citep{gentzkow14}. In such settings, configuration files written in YAML often provide the stable ``contract'' across languages.
+
+Without YAML input and output, Stata becomes an exception that must be manually synchronized with other tools. This raises the cost of maintenance and makes it harder to guarantee that Stata runs are consistent with the rest of the pipeline.
+
+\subsection{YAML for metadata management and validation}
+
+YAML is particularly suitable for storing
+\begin{itemize}
+    \item indicator metadata (names, labels, units, and definitions);
+    \item country lists and region mappings;
+    \item thresholds and validation rules;
+    \item API endpoints and authentication settings; and
+    \item pipeline toggles that control which steps to run or skip.
+\end{itemize}
+
+In reproducible statistics pipelines such as Sustainable Development Goal (SDG) monitoring or survey-data production, YAML can provide a clean external metadata layer that Stata can consume directly. This reduces duplication, centralizes control, and improves transparency in data production systems.
+
+
+\section{Architecture and data model}
+\label{sec:architecture}
+
+\subsection{Command structure}
+
+The \texttt{yaml} command uses a subcommand architecture common in modern CLI tools \citep[following Stata programming conventions described in][]{baum09}:
+\begin{stlog}
+yaml <subcommand> [using filename] [, options]
+\end{stlog}
+
+This design provides a unified entry point while allowing each operation to have its own syntax and options. The command requires Stata 14.0 for basic functionality; the \texttt{frame()} option requires Stata 16.0 or later.
+
+\subsection{Storage structure}
+
+YAML data is stored in a flat dataset with hierarchical references. By default, data is loaded into the current dataset. Using the \texttt{frame()} option loads data into a named Stata frame, allowing multiple YAML files to coexist in memory.
+
+The following variables are created:
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Variable} & \textbf{Type} & \textbf{Description} \\
+\hline
+\texttt{key}    & str244  & Full hierarchical key name \\
+\texttt{value}  & str2000 & Value associated with the key \\
+\texttt{level}  & int     & Nesting depth (1 = root level) \\
+\texttt{parent} & str244  & Parent key for hierarchical lookups \\
+\texttt{type}   & str32   & Value type (string, numeric, boolean, parent, list\_item, null)
+\end{tabular}
+\end{center}
+
+\subsection{Key naming convention}
+
+Keys are flattened using underscores to represent hierarchy. For example, the YAML structure:
+\begin{stlog}
+indicators:
+  CME_MRY0T4:
+    label: Under-five mortality rate
+    unit: Deaths per 1000 live births
+\end{stlog}
+
+is stored as:
+\begin{stlog}
+key                              value                        parent                 type
+---------------------------------------------------------------------------------------
+indicators                       (empty)                      (empty)                parent
+indicators_CME_MRY0T4            (empty)                      indicators             parent
+indicators_CME_MRY0T4_label      Under-five mortality rate    indicators_CME_MRY0T4  string
+indicators_CME_MRY0T4_unit       Deaths per 1000 live births  indicators_CME_MRY0T4  string
+\end{stlog}
+
+\subsection{List item storage}
+
+YAML lists are stored as indexed separate rows:
+\begin{stlog}
+countries:
+  - BRA
+  - ARG
+  - CHL
+\end{stlog}
+
+becomes:
+\begin{stlog}
+key            value   parent      type
+-----------------------------------------------
+countries      (empty) (empty)     parent
+countries_1    BRA     countries   list_item
+countries_2    ARG     countries   list_item
+countries_3    CHL     countries   list_item
+\end{stlog}
+
+\subsection{Supported YAML subset}
+
+The parser targets the JSON Schema subset defined in Chapter~10.2 of the YAML~1.2 specification \citep[see][]{YAML12}:
+\begin{itemize}
+    \item UTF-8 encoded text;
+    \item \texttt{key: value} pairs on a single line;
+    \item nested blocks represented by indentation;
+    \item lists using the \texttt{- value} syntax;
+    \item scalar values (strings, numbers, booleans);
+    \item optional empty values (\texttt{key:});
+    \item hash-based comments (text following \texttt{\#}).
+\end{itemize}
+
+Advanced features such as anchors (\texttt{\&ref}), aliases (\texttt{*ref}), explicit type tags (\texttt{!!type}), block scalars (\texttt{|} and \texttt{>}), and flow-style mappings (\texttt{\{...\}}) are not supported. This restriction is deliberate and reflects a trade-off between completeness and robustness: most configuration files encountered in empirical analytics use only the JSON-compatible subset. As the YAML~1.2 specification notes, the JSON Schema is ``the recommended default schema'' for applications prioritizing interoperability and consistency.
+
+
+\section{Subcommands}
+\label{sec:subcommands}
+
+\subsection{yaml read}
+
+The \texttt{yaml read} command reads a YAML file and parses its contents into the current dataset (default) or a frame.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml read using filename [, frame(name) locals scalars 
+    prefix(string) replace verbose]
+\end{stlog}
+
+\textbf{Options:}
+\begin{itemize}
+    \item \texttt{frame(name)} -- load into frame \texttt{yaml\_name} instead of current dataset (Stata 16+)
+    \item \texttt{locals} -- also store values as local macros in \texttt{r()}
+    \item \texttt{scalars} -- also store numeric values as Stata scalars
+    \item \texttt{prefix(string)} -- prefix for macro/scalar names; default is \texttt{yaml\_}
+    \item \texttt{replace} -- replace existing data in memory
+    \item \texttt{verbose} -- display parsing progress
+\end{itemize}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml read using "config.yaml", replace
+(15 keys read from config.yaml)
+
+. yaml read using "indicators.yaml", frame(ind)
+(230 keys read from indicators.yaml into frame yaml_ind)
+\end{stlog}
+
+\textbf{Stored results:}
+\begin{itemize}
+    \item \texttt{r(n\_keys)} -- number of keys parsed
+    \item \texttt{r(max\_level)} -- maximum nesting depth
+    \item \texttt{r(filename)} -- name of file read
+    \item \texttt{r(frame)} -- name of frame created (if frame option used)
+\end{itemize}
+
+
+\subsection{yaml write}
+
+The \texttt{yaml write} command converts a Stata dataset or frame back into a YAML document.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml write using filename [, frame(name) scalars(namelist) 
+    replace verbose indent(#) header(string)]
+\end{stlog}
+
+\textbf{Options:}
+\begin{itemize}
+    \item \texttt{frame(name)} -- write from frame \texttt{yaml\_name} (Stata 16+)
+    \item \texttt{scalars(namelist)} -- write specified scalars
+    \item \texttt{replace} -- replace existing file
+    \item \texttt{indent(\#)} -- spaces per indent level; default is 2
+    \item \texttt{header(string)} -- custom header comment
+\end{itemize}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml write using "output.yaml", replace
+(15 keys written to output.yaml)
+\end{stlog}
+
+
+\subsection{yaml describe}
+
+The \texttt{yaml describe} command displays the structure of YAML data.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml describe [, frame(name) level(#)]
+\end{stlog}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml describe
+YAML structure (15 keys, max depth 3):
+  name: My Project
+  version: 1.0
+  indicators/
+    CME_MRY0T4/
+      label: Under-five mortality rate
+      unit: deaths per 1000 live births
+    CME_MRY0/
+      label: Neonatal mortality rate
+      unit: deaths per 1000 live births
+\end{stlog}
+
+
+\subsection{yaml list}
+
+The \texttt{yaml list} command lists keys and values, optionally filtered by parent.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml list [parent] [, frame(name) keys values 
+    separator(string) children stata noheader]
+\end{stlog}
+
+\textbf{Options:}
+\begin{itemize}
+    \item \texttt{keys} -- return matching keys as delimited list in \texttt{r(keys)}
+    \item \texttt{values} -- return matching values as delimited list in \texttt{r(values)}
+    \item \texttt{children} -- return only immediate children of parent
+    \item \texttt{stata} -- format output as Stata compound quotes: \texttt{`"item1"' `"item2"'}
+    \item \texttt{separator(string)} -- delimiter for lists; default is space
+\end{itemize}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml list indicators, keys children
+Keys under indicators: CME_MRY0T4 CME_MRY0
+
+. return list
+r(keys) : "CME_MRY0T4 CME_MRY0"
+r(parent) : "indicators"
+
+. foreach ind in `r(keys)' {
+      display "Processing: `ind'"
+  }
+Processing: CME_MRY0T4
+Processing: CME_MRY0
+\end{stlog}
+
+
+\subsection{yaml get}
+
+The \texttt{yaml get} command retrieves metadata attributes for a specific key, returning them as separate \texttt{r()} macros.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml get parent:keyname | keyname [, frame(name) attributes(namelist) quiet]
+\end{stlog}
+
+The colon syntax \texttt{parent:keyname} specifies the parent hierarchy. For example, \texttt{indicators:CME\_MRY0T4} searches for \texttt{CME\_MRY0T4} under \texttt{indicators}.
+
+\textbf{Example:}
+\begin{stlog}
+. yaml get indicators:CME_MRY0T4
+  label: Under-five mortality rate
+  unit: Deaths per 1000 live births
+  dataflow: CME
+
+. return list
+r(key) : "CME_MRY0T4"
+r(parent) : "indicators"
+r(found) : "1"
+r(n_attrs) : "3"
+r(label) : "Under-five mortality rate"
+r(unit) : "Deaths per 1000 live births"
+r(dataflow) : "CME"
+\end{stlog}
+
+
+\subsection{yaml validate}
+
+The \texttt{yaml validate} command checks that required keys exist and validates value types.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml validate [, frame(name) required(keylist) types(key:type ...) quiet]
+\end{stlog}
+
+\textbf{Options:}
+\begin{itemize}
+    \item \texttt{required(keylist)} -- check that specified keys exist
+    \item \texttt{types(key:type ...)} -- validate key types (numeric, string, boolean)
+    \item \texttt{quiet} -- suppress output, only set return values
+\end{itemize}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml validate, required(name version database) ///
+>     types(database_port:numeric debug:boolean)
+Validation passed (3 required keys, 2 type checks)
+
+. return list
+r(valid) : "1"
+r(n_errors) : "0"
+r(n_warnings) : "0"
+r(n_checked) : "5"
+\end{stlog}
+
+
+\subsection{yaml dir}
+
+The \texttt{yaml dir} command provides a comprehensive inventory of all YAML data currently in memory, including both the current dataset and any YAML frames (Stata 16+). This mirrors Stata's \texttt{frames dir} command but extends to cover YAML-specific data.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml dir [, detail]
+\end{stlog}
+
+\textbf{Detection:} YAML data in the current dataset is identified by (1) the presence of standard YAML variables (\texttt{key}, \texttt{value}, \texttt{level}, \texttt{parent}, \texttt{type}), and (2) the \texttt{\_dta[yaml\_source]} characteristic set by \texttt{yaml read}.
+
+\textbf{Example:}
+\begin{stlog}
+. yaml read using "config.yaml", replace
+
+. yaml dir, detail
+
+------------------------------------------------------------
+YAML Data in Memory
+------------------------------------------------------------
+  Current dataset: YAML loaded (13 entries)
+                   Source: config.yaml
+
+  YAML Frames (yaml_* prefix):
+    (no YAML frames loaded)
+------------------------------------------------------------
+Total: 1 YAML source(s) in memory
+       (1 in dataset, 0 in frames)
+\end{stlog}
+
+
+\subsection{yaml frames}
+
+The \texttt{yaml frames} command lists only YAML frames in memory, without reporting on the current dataset. This requires Stata 16+.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml frames [, detail]
+\end{stlog}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml read using "dev_config.yaml", frame(dev)
+. yaml read using "prod_config.yaml", frame(prod)
+
+. yaml frames, detail
+
+------------------------------------------------------------
+YAML Frames in Memory
+------------------------------------------------------------
+  1. dev (12 entries)
+     Source: dev_config.yaml
+  2. prod (12 entries)
+     Source: prod_config.yaml
+------------------------------------------------------------
+Total: 2 YAML frame(s)
+\end{stlog}
+
+The distinction between \texttt{yaml dir} and \texttt{yaml frames} allows users to choose between a comprehensive view (all YAML data) and a frames-only view.
+
+
+\subsection{yaml clear}
+
+The \texttt{yaml clear} command clears YAML data from memory.
+
+\textbf{Syntax:}
+\begin{stlog}
+yaml clear [framename] [, all]
+\end{stlog}
+
+\textbf{Options:}
+\begin{itemize}
+    \item (no argument) -- clear current dataset
+    \item \texttt{framename} -- clear specific frame \texttt{yaml\_framename}
+    \item \texttt{all} -- clear all \texttt{yaml\_*} frames
+\end{itemize}
+
+\textbf{Example:}
+\begin{stlog}
+. yaml clear config
+(yaml_config dropped)
+
+. yaml clear, all
+(3 yaml frames dropped)
+\end{stlog}
+
+
+\section{Applications}
+\label{sec:applications}
+
+\subsection{Indicator metadata management with the UNICEF SDMX API}
+
+The UNICEF Data Warehouse provides access to child-related indicators through an SDMX-compliant REST API \citep{SDMX21}. Indicator metadata---including names, units, dataflow identifiers, and SDG mappings---can be centralized in a YAML file:
+\begin{stlog}
+indicators:
+  CME_MRY0T4:
+    name: Under-five mortality rate
+    unit: Deaths per 1,000 live births
+    dataflow: CME
+    sdg_target: "3.2.1"
+  NT_ANT_HAZ_NE2_MOD:
+    name: Stunting prevalence (moderate and severe)
+    unit: Percent
+    dataflow: NUTRITION
+    sdg_target: "2.2.1"
+  IM_DTP3:
+    name: DTP3 immunization coverage
+    unit: Percent
+    dataflow: IMMUNISATION
+    sdg_target: "3.b.1"
+\end{stlog}
+
+Loading this metadata into a frame keeps it available while working with downloaded data:
+\begin{stlog}
+. yaml read using "unicef_indicators.yaml", frame(meta)
+(9 keys read into frame yaml_meta)
+
+. yaml list indicators, keys children frame(meta)
+Keys under indicators: CME_MRY0T4 NT_ANT_HAZ_NE2_MOD IM_DTP3
+\end{stlog}
+
+The metadata can drive API queries. The SDMX URL pattern requires the dataflow identifier:
+\begin{stlog}
+. local api_base "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/data"
+
+. yaml get indicators:CME_MRY0T4, frame(meta) quiet
+. local flow "`r(dataflow)'"
+. local api_url "`api_base'/UNICEF,`flow',1.0/.CME_MRY0T4.?format=csv"
+
+. import delimited "`api_url'", clear
+(18 vars, 5,847 obs)
+\end{stlog}
+
+After downloading, the same YAML metadata can be used to label variables:
+\begin{stlog}
+. yaml get indicators:CME_MRY0T4, frame(meta) quiet
+. label variable obs_value "`r(name)' (`r(unit)')"
+
+. describe obs_value
+
+Variable      Storage   Display    Value
+    name         type    format     label      Variable label
+------------------------------------------------------------------------
+obs_value      double  %10.0g                  Under-five mortality rate
+                                               (Deaths per 1,000 live births)
+\end{stlog}
+
+For batch processing, a loop can download multiple indicators and apply labels:
+\begin{stlog}
+. yaml list indicators, keys children frame(meta)
+. local indicators "`r(keys)'"
+
+. foreach ind of local indicators {
+      yaml get indicators:`ind', frame(meta) quiet
+      local flow "`r(dataflow)'"
+      local url "`api_base'/UNICEF,`flow',1.0/.`ind'.?format=csv"
+      
+      import delimited "`url'", clear
+      label variable obs_value "`r(name)'"
+      label data "`r(name)' - SDG `r(sdg_target)'"
+      save "`ind'.dta", replace
+  }
+\end{stlog}
+
+This approach centralizes indicator definitions in a human-readable, version-controlled file. The same YAML metadata can be consumed by R or Python scripts, ensuring consistency across a multi-language pipeline.
+
+
+\subsection{YAML-driven microdata harmonization}
+
+Survey microdata harmonization involves renaming variables, applying consistent labels, and recoding values across source files. A YAML configuration can define variable mappings with \texttt{from:} (source) and \texttt{to:} (harmonized) codes, labels, and value label mappings:
+\begin{stlog}
+survey: MICS6
+country: ETH
+year: 2024
+input_file: "et_mics6_raw.dta"
+output_file: "et_mics6_harmonized.dta"
+
+variables:
+  hhid:
+    from: HH1
+    to: hhid
+    label: Household ID
+  weight:
+    from: chweight
+    to: weight
+    label: Child sample weight
+  male:
+    from: HL4
+    to: male
+    label: Sex (1=Male, 0=Female)
+    values:
+      - from: 1
+        to: 1
+        label: Male
+      - from: 2
+        to: 0
+        label: Female
+  hepatitis_b:
+    from: IM14
+    to: hepatitis_b
+    label: Hepatitis B vaccination status
+    values:
+      - from: 1
+        to: 1
+        label: Vaccinated
+      - from: 2
+        to: 0
+        label: Not vaccinated
+      - from: 8
+        to: .
+        label: Unknown
+\end{stlog}
+
+A Stata harmonization script reads this configuration and applies the mappings:
+\begin{stlog}
+. yaml read using "mics_eth_config.yaml", frame(config)
+
+. yaml get input_file, frame(config) quiet
+. use "`r(value)'", clear
+
+. yaml list variables, keys children frame(config)
+. local varlist "`r(keys)'"
+
+. foreach var of local varlist {
+      yaml get variables:`var', frame(config) quiet
+      local src "`r(from)'"
+      local tgt "`r(to)'"
+      local lbl "`r(label)'"
+      
+      * Rename variable
+      rename `src' `tgt'
+      label variable `tgt' "`lbl'"
+      
+      * Check for value mappings
+      yaml list variables:`var':values, keys children frame(config)
+      if "`r(keys)'" != "" {
+          * Build recode and value label from YAML
+          local recode_str ""
+          label define `tgt'_lbl, replace
+          
+          foreach v in `r(keys)' {
+              yaml get variables:`var':values:`v', frame(config) quiet
+              local recode_str "`recode_str' (`r(from)' = `r(to)')"
+              if "`r(to)'" != "." {
+                  label define `tgt'_lbl `r(to)' "`r(label)'", add
+              }
+          }
+          
+          recode `tgt' `recode_str'
+          label values `tgt' `tgt'_lbl
+      }
+  }
+\end{stlog}
+
+After processing, the harmonized dataset has consistent variable names, labels, and value labels:
+\begin{stlog}
+. describe male hepatitis_b
+
+Variable      Storage   Display    Value
+    name         type    format     label           Variable label
+------------------------------------------------------------------------
+male           byte     %8.0g      male_lbl        Sex (1=Male, 0=Female)
+hepatitis_b    byte     %8.0g      hepatitis_b_lbl Hepatitis B vaccination
+
+. label list male_lbl hepatitis_b_lbl
+male_lbl:
+           0 Female
+           1 Male
+hepatitis_b_lbl:
+           0 Not vaccinated
+           1 Vaccinated
+\end{stlog}
+
+This pattern separates harmonization logic from code, making it easier to document, version-control, and audit variable and value mappings across surveys. The same YAML configuration can generate documentation or drive harmonization in other languages.
+
+
+
+
+
+\subsection{Configuration validation}
+
+Automated pipelines can validate configurations before execution:
+\begin{stlog}
+. yaml read using "pipeline_config.yaml", replace
+
+. yaml validate, required(name version database api_endpoint) ///
+      types(database_port:numeric api_timeout:numeric debug:boolean)
+
+. if (r(valid) == 0) {
+      di as error "Configuration validation failed!"
+      di as error "Missing keys: `r(missing_keys)'"
+      exit 198
+  }
+\end{stlog}
+
+This approach separates the specification of configuration requirements from their implementation and facilitates transparent governance of pipeline settings.
+
+
+\subsection{Working with multiple YAML files}
+
+Stata 16+ users can load multiple configurations into frames:
+\begin{stlog}
+. yaml read using "dev_config.yaml", frame(dev)
+. yaml read using "prod_config.yaml", frame(prod)
+
+. yaml frames, detail
+
+------------------------------------------------------------
+YAML Frames in Memory
+------------------------------------------------------------
+  1. dev (12 entries)
+     Source: dev_config.yaml
+  2. prod (12 entries)
+     Source: prod_config.yaml
+------------------------------------------------------------
+Total: 2 YAML frame(s)
+
+. yaml dir, detail
+
+------------------------------------------------------------
+YAML Data in Memory
+------------------------------------------------------------
+  Current dataset: YAML loaded (13 entries)
+                   Source: config.yaml
+
+  YAML Frames (yaml_* prefix):
+    1. dev (12 entries)
+       Source: dev_config.yaml
+    2. prod (12 entries)
+       Source: prod_config.yaml
+------------------------------------------------------------
+Total: 3 YAML source(s) in memory
+       (1 in dataset, 2 in frames)
+
+. yaml get database:host, frame(dev)
+. local dev_host "`r(host)'"
+
+. yaml get database:host, frame(prod)
+. local prod_host "`r(host)'"
+
+. display "Dev: `dev_host', Prod: `prod_host'"
+Dev: localhost, Prod: db.production.example.com
+\end{stlog}
+
+
+\subsection{Round-trip: read and write}
+
+YAML files can be read, modified programmatically, and written back. This round-trip capability enables Stata to serve as an active participant in configuration management, not merely a consumer:
+\begin{stlog}
+. yaml read using "config.yaml", replace
+
+. * Update version number
+. replace value = "3.0" if key == "version"
+(1 real change made)
+
+. * Add timestamp of last modification
+. local today : display %tdCY-N-D date(c(current_date), "DMY")
+. replace value = "`today'" if key == "last_modified"
+(1 real change made)
+
+. yaml write using "config_updated.yaml", replace
+(15 keys written to config_updated.yaml)
+\end{stlog}
+
+This pattern supports workflows where Stata updates pipeline metadata---such as incrementing version numbers, recording execution timestamps, or updating status flags---that are subsequently consumed by other tools in the pipeline.
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+The \texttt{yaml} command helps position Stata as a first-class actor in modern, multi-language analytical ecosystems. The implementation follows established Stata programming conventions \citep{cox05d}. Key strengths of the approach include
+\begin{itemize}
+    \item \emph{Portability}: YAML is widely supported, human-friendly, and easily versioned.
+    \item \emph{Reproducibility}: externalizing configuration promotes clean and stable workflows.
+    \item \emph{Interoperability}: Stata can now consume and emit the same configuration artifacts used by R, Python, and infrastructure tools.
+    \item \emph{Transparency}: the chosen YAML subset is simple enough to be inspected and edited by hand.
+    \item \emph{No dependencies}: the implementation is pure Stata with no external requirements.
+\end{itemize}
+
+The design philosophy underlying \texttt{yaml} resonates with \citet{knuth84}'s principles of literate programming, which advocated treating programs as works of literature meant to be read by humans, not merely executed by machines. Knuth argued that the quality of software improves when programmers focus on explaining their logic to human readers rather than merely instructing computers. YAML-based configuration embodies this principle: by externalizing parameters, metadata, and workflow logic into human-readable files, analysts create self-documenting systems where the ``what'' and ``why'' of a pipeline are as visible as the ``how.'' The microdata harmonization example in Section~\ref{sec:applications} illustrates this directly---the YAML file serves simultaneously as configuration, documentation, and audit trail. This separation of concerns aligns with literate programming's core insight that code and documentation should be woven together rather than treated as separate artifacts.
+
+There are, however, limitations. The current implementation covers only the JSON Schema subset of YAML~1.2 (Chapter~10.2 of the specification). Advanced features, such as anchors, aliases, type tags, and block scalars, are not supported. Parsing relies on indentation rules, so malformed YAML will lead to structured error messages rather than partial recovery. These design choices are acceptable for configuration files but may make the tools unsuitable for some more complex YAML documents.
+
+Potential extensions include
+\begin{itemize}
+    \item a Mata-based associative-dictionary interface layered on top of the frame representation;
+    \item helper commands for emitting YAML variants tailored to specific platforms;
+    \item support for block scalars (\texttt{|} and \texttt{>}) for multi-line text; and
+    \item interactive tools for editing YAML directly from within Stata.
+\end{itemize}
+
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+As reproducible analytics increasingly span multiple programming languages and platforms, the ability to consume and generate human-readable configuration files becomes essential. YAML has emerged as a standard format for such configurations. The \texttt{yaml} command provides Stata users with a comprehensive yet simple mechanism to integrate YAML-based workflows into their empirical research, enabling cleaner metadata management, more flexible pipeline design, and seamless interoperability with R, Python, and automation systems based on GitHub and similar platforms.
+
+The unified subcommand architecture---with \texttt{read}, \texttt{write}, \texttt{describe}, \texttt{list}, \texttt{get}, \texttt{validate}, \texttt{dir}, \texttt{frames}, and \texttt{clear}---provides a complete toolkit for YAML operations while maintaining a simple and consistent interface. By bringing YAML into Stata in a lightweight and dependency-free manner, this command helps position Stata as a fully participating component of interdisciplinary analytical ecosystems and strengthens the reproducibility and transparency of statistical workflows that rely on cross-platform collaboration.
+
+\section*{Acknowledgments}
+
+The author thanks the Stata Journal editors and anonymous reviewers for their constructive feedback. The views expressed in this article are those of the author and do not necessarily reflect the official position of UNICEF.
+
+\bibliographystyle{sj}
+\bibliography{sj}
+
+
+\begin{aboutauthor}
+Jo\~ao Pedro Azevedo is Deputy Director and Chief Statistician in UNICEF's Division of Data, Analytics, Planning and Monitoring. He works on official statistics and on the development of reproducible, cross-platform, and scalable analytical pipelines that support the production and use of child-related data in global monitoring systems, with the aim of generating policy-relevant insights and informing action on the ground.
+\end{aboutauthor}
+
