@@ -81,7 +81,7 @@ yaml write using output.yaml, replace
 │  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
 │  │  │   key    │   value    │ level │   parent   │   type   │        │     │
 │  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
-│  │  │ str244   │ str2045    │ int   │ str244     │ str32    │        │     │
+│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │        │     │
 │  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
 │                                                                              │
@@ -234,7 +234,7 @@ YAML data is stored in a flat dataset with hierarchical references:
 | Column | Type | Description |
 |--------|------|-------------|
 | `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
-| `value` | str2045 | The value associated with the key |
+| `value` | str2000 | The value associated with the key |
 | `level` | int | Nesting depth (0 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
