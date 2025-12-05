@@ -96,6 +96,20 @@ if _rc {
 }
 
 if (`download_ok' == 1) {
+    * Rename variables to lowercase for consistency
+    * (SDMX API returns uppercase names like REF_AREA, INDICATOR, etc.)
+    capture rename REF_AREA ref_area
+    capture rename INDICATOR indicator
+    capture rename TIME_PERIOD time_period
+    capture rename OBS_VALUE obs_value
+    capture rename DATAFLOW dataflow
+    
+    * Generate dataflow from indicator prefix if not present
+    capture confirm variable dataflow
+    if _rc {
+        gen dataflow = substr(indicator, 1, strpos(indicator, "_") - 1)
+    }
+    
     * Show what we downloaded
     display as text "--- Downloaded data structure ---"
     describe, short
@@ -518,6 +532,9 @@ foreach ind in CME_MRY0T4 NT_ANT_HAZ_NE2_MOD IM_DTP3 {
     capture noisily {
         import delimited "`api_url'", clear varnames(1)
         
+        * Rename uppercase variables from SDMX API
+        capture rename OBS_VALUE obs_value
+        
         * Apply metadata from YAML
         label variable obs_value "`name' (`unit')"
         label data "`name' - SDG `sdg'"
@@ -755,6 +772,9 @@ foreach ind of local indicators_to_download {
     capture {
         preserve
         import delimited "`api_url'", clear varnames(1)
+        * Rename uppercase variables from SDMX API
+        capture rename TIME_PERIOD time_period
+        capture rename REF_AREA ref_area
         qui count
         local n_obs = r(N)
         qui sum time_period
