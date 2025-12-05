@@ -425,14 +425,19 @@ yaml/
 ├── .gitignore
 ├── src/y/
 │   ├── yaml.ado           # Main command (v1.3.0)
-│   └── yaml.sthlp          # Stata help file
+│   └── yaml.sthlp         # Stata help file
 ├── examples/              # Examples and test files
 │   ├── README.md
-│   ├── test_yaml.do       # Main example script
+│   ├── yaml_sj_article_examples.do   # Stata Journal article examples
+│   ├── yaml_basic_examples.do        # Basic usage examples
 │   ├── data/              # Sample YAML files
 │   └── logs/              # Output logs from examples
-└── paper/                 # Manuscript
-    └── main.pdf           # Compiled paper
+└── paper/                 # Stata Journal manuscript
+    ├── main-v2.tex        # LaTeX driver file
+    ├── yamlstata-v2.tex   # Article content
+    ├── sj.bib             # Bibliography
+    └── figures/           # Publication figures
+        └── yaml_workflow.pdf
 ```
 
 ## Suggested Citation

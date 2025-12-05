@@ -1,0 +1,49 @@
+% main-v2.tex — Driver for Stata Journal article: yaml command
+% 
+% This file loads the Stata Press class and SJ packages, then inputs the
+% article content from yamlstata-v2.tex. Compile with:
+%
+%   lualatex main-v2
+%   bibtex main-v2
+%   lualatex main-v2
+%   lualatex main-v2
+%
+% or use the provided pdfdoit.bat / pdfdoit.sh scripts.
+
+% Stata Press document class (use [bib] for bibliography support)
+\documentclass[bib]{statapress}
+
+% Page dimensions (crop marks for proofing)
+\usepackage[crop,newcenter,frame]{pagedims}
+
+% Stata Journal style package
+\usepackage{sj}
+
+% Encapsulated PostScript figures (if needed)
+\usepackage{epsfig}
+
+% Stata log listings and macros
+\usepackage{stata}
+
+% AMS math extensions
+\usepackage{amsmath}
+
+% Shadow package (for technical note figures, if used)
+\usepackage{shadow}
+
+% Table packages
+\usepackage{threeparttable}
+\usepackage{tabularx}
+
+\usepackage{booktabs}
+
+% EDITORS: Volume, issue, month, year (filled in by Stata Press)
+\sjsetissue{$vv$}{$ii$}{$mm$}{$yyyy$}
+
+\begin{document}
+
+% Article content
+\input{yamlstata-v2}
+
+\clearpage
+\end{document}

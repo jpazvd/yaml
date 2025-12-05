@@ -1,0 +1,35 @@
+# Indicator metadata configuration
+# Used in Stata Journal article examples for metadata harmonization
+
+name: UNICEF Indicator Definitions
+version: 2.0
+last_updated: 2024-12-01
+
+indicators:
+  CME_MRY0T4:
+    label: Under-five mortality rate
+    unit: Deaths per 1000 live births
+    dataflow: CME
+    source: UN IGME
+    definition: Probability of dying between birth and age 5
+    
+  CME_MRY0:
+    label: Neonatal mortality rate
+    unit: Deaths per 1000 live births
+    dataflow: CME
+    source: UN IGME
+    definition: Probability of dying during the first 28 days of life
+    
+  NT_ANT_HAZ_NE2:
+    label: Stunting prevalence
+    unit: Percentage
+    dataflow: NUTRITION
+    source: JME
+    definition: Children under 5 with height-for-age below -2 SD
+    
+  WS_PPL_W-SM:
+    label: Safely managed drinking water
+    unit: Percentage of population
+    dataflow: WASH
+    source: JMP
+    definition: Population using safely managed drinking water services
