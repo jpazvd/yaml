@@ -1,7 +1,9 @@
 *******************************************************************************
 * yaml
-*! v 1.3.0   04Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.3.1   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
+* v1.3.1: Fixed return value propagation from frame context in yaml_get and yaml_list
+*         Fixed hyphen-to-underscore normalization in yaml_get search prefix
 *******************************************************************************
 
 /*
@@ -795,6 +797,11 @@ program define yaml_get, rclass
         local parent ""
         local search_prefix "`keyname'"
     }
+    
+    * Clean search_prefix - convert special chars to underscores (to match how keys are stored)
+    local search_prefix = subinstr("`search_prefix'", "-", "_", .)
+    local search_prefix = subinstr("`search_prefix'", " ", "_", .)
+    local search_prefix = subinstr("`search_prefix'", ".", "_", .)
     
     * Search for attributes
     if (`use_frame' == 1) {
