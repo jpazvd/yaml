@@ -10,6 +10,8 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
+**Latest:** v1.3.1 with production-tested optimization patterns for large metadata catalogs (700+ entries) achieving 50× performance improvement through vectorized frame-based queries.
+
 ### Key Features
 
 - **Read YAML files** into Stata's data structure or frames
@@ -395,13 +397,35 @@ yaml get countries
 * Returns: r(1)="BRA" r(2)="ARG" r(3)="CHL"
 ```
 
+## Performance Optimization for Large Catalogs
+
+For metadata catalogs with 700+ entries, **vectorized frame-based queries** dramatically outperform iterative `yaml get` calls:
+
+| Approach | Time | Relative |
+|----------|------|----------|
+| Naive: 733 iterative `yaml get` calls | 15+ seconds | 50× |
+| **Optimized: Direct frame dataset query** | **0.3 seconds** | **1×** |
+
+**Key Pattern** (see paper Section 5.2):
+```stata
+yaml read using indicators_catalog.yaml, frame(meta)
+frame yaml_meta {
+    gen is_nutrition = (value == "NUTRITION") & ///
+        regexm(key, "^indicators_[A-Za-z0-9_]+_dataflow$")
+    levelsof indicator_code if is_nutrition == 1, local(nutrition_codes)
+}
+```
+
+Vectorized operations (gen, regexm, levelsof) process all rows at once rather than looping through function calls. Frame isolation provides data protection and instant cleanup. See production examples in `src/y/README.md`.
+
 ## Use Cases
 
 - **Pipeline Configuration**: Database connections, API endpoints, timeouts
-- **Metadata Management**: Indicator definitions, variable labels, units
+- **Metadata Management**: Indicator definitions, variable labels, units (optimized for 700+ catalogs)
 - **Cross-language Workflows**: Share configurations with R, Python, GitHub Actions
 - **Reproducible Research**: Version-controlled configuration files
 - **Multi-environment Support**: Dev/staging/prod configurations in separate frames
+- **LLM Workflows**: YAML-based tool interfaces and pipeline orchestration
 
 ## Design Principles
 
@@ -424,26 +448,38 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.3.0)
-│   └── yaml.sthlp         # Stata help file
+│   ├── yaml.ado           # Main command (v1.3.1)
+│   ├── yaml.sthlp         # Stata help file
+│   └── README.md          # Command documentation with production examples
 ├── examples/              # Examples and test files
 │   ├── README.md
 │   ├── yaml_sj_article_examples.do   # Stata Journal article examples
 │   ├── yaml_basic_examples.do        # Basic usage examples
 │   ├── data/              # Sample YAML files
 │   └── logs/              # Output logs from examples
-└── paper/                 # Stata Journal manuscript
-    ├── main-v2.tex        # LaTeX driver file
-    ├── yamlstata-v2.tex   # Article content
-    ├── sj.bib             # Bibliography
-    └── figures/           # Publication figures
-        └── yaml_workflow.pdf
+└── paper/submission/
+    └── latex/
+        ├── main-v2.tex         # LaTeX driver (original version, 19 pages)
+        ├── main-v3.tex         # LaTeX driver (current with optimization, 21 pages)
+        ├── yamlstata-v2.tex    # Article content (original)
+        ├── yamlstata-v3.tex    # Article content (Section 5.2: large catalog optimization)
+        ├── sj.bib              # Bibliography
+        ├── figures/
+        │   ├── yaml_layers_bw.tex    # TikZ source for architecture diagram
+        │   └── yaml_layers_bw.pdf    # Compiled architecture diagram (36 KB)
+        └── [support files]
 ```
 
 ## Suggested Citation
 
+**For the Stata command:**
+
 Azevedo, João Pedro. 2025. "yaml: Stata module for YAML file processing." 
 Statistical Software Components, Boston College Department of Economics.
+
+**For the Stata Journal article:**
+
+Azevedo, João Pedro. 2025. "Reading and writing YAML files in Stata: A lightweight framework for reproducible and cross-platform analytics." *The Stata Journal*, v3 (forthcoming). See `paper/submission/latex/main-v3.tex` for current version.
 
 ## Author
 

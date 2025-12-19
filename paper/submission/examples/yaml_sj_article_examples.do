@@ -34,7 +34,8 @@ set linesize 80
 cap log close
 
 * Set working directory
-cd "D:\jazevedo\GitHub\ados\yaml"
+cap: cd "D:\jazevedo\GitHub\ados\yaml"
+cap: cd "cd C:\GitHub\yaml\"
 
 * Load the yaml command
 run "src/y/yaml.ado"
@@ -877,6 +878,41 @@ display _n
 
 restore
 
+* ===========================================================================
+* PART 9: Large Catalog Optimization with Frames (Stata 16+)
+* ===========================================================================
+*
+* Mirrors Section 5.2 of the paper: vectorized frame-based queries that scale
+* to 700+ metadata entries. The sample file is small, but the pattern matches
+* production usage.
+
+display as result _n "{hline 70}"
+display as result "PART 9: Frame-based filtering for large catalogs"
+display as result "{hline 70}" _n
+
+* Load indicator metadata into an isolated frame
+yaml read using "`datadir'/unicef_indicators.yaml", frame(meta) replace
+
+* Vectorized filtering inside the frame (no per-row yaml get calls)
+frame yaml_meta {
+    gen is_nutrition = (value == "NUTRITION") & ///
+        regexm(key, "^indicators_[A-Za-z0-9_]+_dataflow$")
+    gen indicator_code = regexs(1) if ///
+        regexm(key, "^indicators_([A-Za-z0-9_]+)_dataflow$") & is_nutrition
+
+    levelsof indicator_code if is_nutrition == 1, local(nutrition_codes) clean
+
+    display as text "Nutrition indicators (vectorized lookup):"
+    foreach ind of local nutrition_codes {
+        levelsof value if key == "indicators_`ind'_name", local(ind_name) clean
+        levelsof value if key == "indicators_`ind'_sdg_target", local(ind_sdg) clean
+        di as result "  `ind': `ind_name' (SDG `ind_sdg')"
+    }
+}
+
+* Cleanup frame
+frame drop yaml_meta
+
 * ==============================================================================
 * CLEANUP
 * ==============================================================================
@@ -901,6 +937,7 @@ display as text "  5. Configuration-driven API query generation"
 display as text "  6. SDG indicator mapping"
 display as text "  7. Writing metadata summaries with yaml write"
 display as text "  8. Creating comprehensive download logs in YAML format"
+display as text "  9. Frame-based filtering for large catalogs (vectorized)"
 display _n
 
 display as text "KEY POINT: yaml write creates PHYSICAL FILES on disk."
