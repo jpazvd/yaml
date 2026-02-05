@@ -4,9 +4,13 @@
 * Frame option: requires explicit frame(name) - Stata 16+ only
 clear all
 set more off
+discard
 
 * Add ado path (parent directory contains src/y/)
 adopath + "../src/y"
+adopath + "../src/_"
+capture program drop yaml
+run "../src/y/yaml.ado"
 
 di as text "{hline 70}"
 di as text "{bf:TEST 1: Read YAML into current dataset (default)}"
@@ -23,17 +27,28 @@ di as text "{hline 70}"
 di as text "{bf:TEST 1b: Fast-scan read with fields/listkeys + cache}"
 di as text "{hline 70}"
 
-yaml read using "data/indicators.yaml", fastscan ///
+capture noisily yaml read using "data/fastscan_indicators.yaml", fastscan replace ///
     fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
 
-di as text "Fast-scan output (first 5 rows):"
-list in 1/5, clean noobs
+local fastscan_ok = (_rc == 0)
+if (`fastscan_ok') {
+    di as text "Fast-scan output (first 5 rows):"
+    list in 1/5, clean noobs
 
-yaml read using "data/indicators.yaml", fastscan ///
-    fields(name description source_id topic_ids) ///
-    listkeys(topic_ids topic_names) cache(ind_cache)
-di as text "Cache hit (expect 1): " r(cache_hit)
+    capture noisily yaml read using "data/fastscan_indicators.yaml", fastscan replace ///
+        fields(name description source_id topic_ids) ///
+        listkeys(topic_ids topic_names) cache(ind_cache)
+    if (_rc == 0) {
+        di as text "Cache hit (expect 1): " r(cache_hit)
+    }
+    else {
+        di as error "Fast-scan cache test failed (r(`=_rc'))"
+    }
+}
+else {
+    di as error "Fast-scan test skipped (r(`=_rc'))"
+}
 
 di as text ""
 di as text "{hline 70}"

@@ -9,6 +9,7 @@ cap log close
 
 * Resolve project root
 local root = c(pwd)
+local exdir "`root'/examples"
 
 * Add ado path
 adopath ++ "`root'/src/y"
@@ -27,15 +28,17 @@ noi di as text "{hline 70}"
 * -----------------------------------------------------------------------------
 * Basic regression tests (examples-based)
 * -----------------------------------------------------------------------------
+quietly cd "`exdir'"
 noi di as text "Running examples/test_yaml.do"
-do "`root'/examples/test_yaml.do"
+do "`exdir'/test_yaml.do"
 
 noi di as text "Running examples/test_yaml_improvements.do"
-do "`root'/examples/test_yaml_improvements.do"
+do "`exdir'/test_yaml_improvements.do"
 
 * Optional: fastscan example run
 noi di as text "Running examples/yaml_basic_examples.do"
-do "`root'/examples/yaml_basic_examples.do"
+do "`exdir'/yaml_basic_examples.do"
+quietly cd "`root'"
 
 noi di as text "{hline 70}"
 noi di as result "QA run completed."
