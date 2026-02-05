@@ -11,16 +11,14 @@ The `yaml` command provides a complete YAML 1.2 (subset) parser for Stata, enabl
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              yaml.ado                                        │
+│                         (dispatcher only)                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌─────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐                │
-│   │  read   │    │  write  │    │ describe │    │  list   │                │
-│   └────┬────┘    └────┬────┘    └────┬─────┘    └────┬────┘                │
-│        │              │              │               │                      │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐    ┌───┴────┐                 │
-│   │   get   │    │validate │    │  frames  │    │  clear │                 │
-│   └─────────┘    └─────────┘    └──────────┘    └────────┘                 │
-│                                                                              │
+│   yaml_read.ado      yaml_write.ado     yaml_describe.ado     yaml_list.ado  │
+│   yaml_get.ado       yaml_validate.ado  yaml_dir.ado          yaml_frames.ado│
+│   yaml_clear.ado                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Helpers (used by yaml_read):                                                │
+│   _yaml_fastscan.ado    _yaml_tokenize_line.ado   _yaml_pop_parents.ado      │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                         Internal Storage                                     │
 │  ┌────────────────────────────────────────────────────────────────────┐     │
