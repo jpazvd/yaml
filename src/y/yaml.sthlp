@@ -321,6 +321,13 @@ Clears YAML data from memory.
 {phang2}// Creates frame yaml_config, preserves current dataset{p_end}
 
 {pstd}
+{bf:Example 2b: Fast-scan for large metadata (opt-in)}{p_end}
+
+{phang2}{cmd:. yaml read using "indicators.yaml", fastscan fields(name description source_id topic_ids) }{p_end}
+{phang2}{cmd:.     listkeys(topic_ids topic_names) cache(ind_cache)}{p_end}
+{phang2}{cmd:. list in 1/5}{p_end}
+
+{pstd}
 {bf:Example 3: Work with multiple YAML files using frames}{p_end}
 
 {phang2}{cmd:. yaml read using "config.yaml", frame(cfg)}{p_end}
@@ -418,6 +425,8 @@ Clears YAML data from memory.
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:r(filename)}}name of file read{p_end}
 {synopt:{cmd:r(frame)}}name of frame created (if frame option used){p_end}
+{synopt:{cmd:r(yaml_mode)}}parsing mode: {cmd:canonical} or {cmd:fastscan}{p_end}
+{synopt:{cmd:r(cache_hit)}}1 if cache was used, 0 otherwise{p_end}
 {synopt:{cmd:r(yaml_*)}}values from YAML file (when {opt locals} specified){p_end}
 
 {pstd}
@@ -446,6 +455,11 @@ The {opt frame()} option requires Stata 16.0 or later.
 {phang2}- Complex keys{p_end}
 {phang2}- Flow style ({c -(}key: value{c )-}){p_end}
 {phang2}- Document markers (---){p_end}
+
+{pstd}
+{cmd:fastscan} mode is optimized for shallow mappings and list blocks, and does not
+support anchors, aliases, or complex nested structures. Use the canonical parser
+for full YAML compliance.
 
 
 {marker author}{...}
