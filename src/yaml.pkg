@@ -1,0 +1,34 @@
+v 1.5.0
+d 'YAML': Stata module for YAML file processing
+d 
+d yaml is a unified Stata command for reading, writing, and manipulating
+d YAML configuration files using a JSON-compatible YAML 1.2 subset.
+d 
+d KW: yaml
+d KW: configuration
+d KW: metadata
+d KW: parsing
+d 
+d Requires: Stata version 14
+d 
+d Distribution-Date: 20260205
+d License: MIT
+d 
+d Author: João Pedro Azevedo
+d Support: https://github.com/jpazvd/yaml
+d 
+f y/yaml.ado
+f y/yaml_read.ado
+f y/yaml_write.ado
+f y/yaml_describe.ado
+f y/yaml_list.ado
+f y/yaml_get.ado
+f y/yaml_validate.ado
+f y/yaml_dir.ado
+f y/yaml_frames.ado
+f y/yaml_clear.ado
+f y/yaml.sthlp
+f y/yaml_whatsnew.sthlp
+f _/_yaml_fastscan.ado
+f _/_yaml_tokenize_line.ado
+f _/_yaml_pop_parents.ado
