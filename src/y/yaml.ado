@@ -1,7 +1,9 @@
 *******************************************************************************
 * yaml
-*! v 1.4.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
+* v1.5.0: Added canonical early-exit targets, streaming tokenization, index frames,
+*         fastscan block scalar capture, unsupported-feature checks, and file checks
 * v1.3.1: Fixed return value propagation from frame context in yaml_get and yaml_list
 *         Fixed hyphen-to-underscore normalization in yaml_get search prefix
 *******************************************************************************
@@ -110,7 +112,8 @@ program define yaml_read, rclass
     version 14.0
     
     syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
-        FASTSCAN FIELDS(string) LISTKEYS(string) CACHE(string)]
+        FASTSCAN FIELDS(string) LISTKEYS(string) CACHE(string) ///
+        TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string)]
     
     * Validate option combinations
     if ("`fastscan'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
@@ -119,6 +122,26 @@ program define yaml_read, rclass
     }
     if ("`listkeys'" != "" & "`fastscan'" == "") {
         di as err "listkeys() requires fastscan"
+        exit 198
+    }
+    if ("`blockscalars'" != "" & "`fastscan'" == "") {
+        di as err "blockscalars requires fastscan"
+        exit 198
+    }
+    if ("`targets'" != "" & "`fastscan'" != "") {
+        di as err "targets() is not supported with fastscan"
+        exit 198
+    }
+    if ("`stream'" != "" & "`fastscan'" != "") {
+        di as err "stream is not supported with fastscan"
+        exit 198
+    }
+    if ("`index'" != "" & "`fastscan'" != "") {
+        di as err "index() is not supported with fastscan"
+        exit 198
+    }
+    if ("`earlyexit'" != "" & "`targets'" == "") {
+        di as err "earlyexit requires targets()"
         exit 198
     }
     if ("`fields'" != "") {
@@ -135,6 +158,12 @@ program define yaml_read, rclass
             exit 198
         }
     }
+    if ("`index'" != "") {
+        if (`c(stata_version)' < 16) {
+            di as err "index() option requires Stata 16 or later"
+            exit 198
+        }
+    }
 
     * Set default prefix
     if ("`prefix'" == "") {
@@ -143,6 +172,21 @@ program define yaml_read, rclass
     
     * Check file exists
     confirm file "`using'"
+
+    * Readability + empty-file check
+    tempname fh_check
+    capture file open `fh_check' using "`using'", read text
+    if (_rc != 0) {
+        di as err "YAML file not readable: `using'"
+        exit 603
+    }
+    file read `fh_check' line
+    if (r(eof) == 1) {
+        file close `fh_check'
+        di as err "YAML file is empty: `using'"
+        exit 198
+    }
+    file close `fh_check'
 
     * Parse cache() option (Stata 16+)
     local cache_frame ""
@@ -161,6 +205,20 @@ program define yaml_read, rclass
             local cache_frame "yaml_`cache_frame'"
         }
     }
+
+    * Parse index() option (Stata 16+)
+    local index_frame ""
+    if ("`index'" != "") {
+        if (strpos("`index'", "frame=") == 1) {
+            local index_frame = substr("`index'", 7, .)
+        }
+        else {
+            local index_frame "`index'"
+        }
+        if (substr("`index_frame'", 1, 5) != "yaml_") {
+            local index_frame "yaml_`index_frame'"
+        }
+    }
     
     * If frame specified, add yaml_ prefix if not present
     if ("`frame'" != "") {
@@ -176,7 +234,7 @@ program define yaml_read, rclass
     
     * Compute file checksum if caching
     local file_hash ""
-    if ("`cache_frame'" != "") {
+    if ("`cache_frame'" != "" & `cache_hit' == 0) {
         capture checksum "`using'"
         if (_rc != 0) {
             di as err "checksum failed for: `using'"
@@ -186,12 +244,15 @@ program define yaml_read, rclass
     }
 
     * Cache hit? (Stata 16+)
+    local cache_hit = 0
+    local skip_parse = 0
+    local yaml_mode = cond("`fastscan'" != "", "fastscan", "canonical")
     if ("`cache_frame'" != "") {
         capture frame `cache_frame': count
         if (_rc == 0 & r(N) > 0) {
             capture frame `cache_frame': local cache_hash : char _dta[yaml_checksum]
             capture frame `cache_frame': local cache_mode : char _dta[yaml_mode]
-            if ("`cache_hash'" == "`file_hash'" & "`cache_mode'" == cond("`fastscan'" != "", "fastscan", "canonical")) {
+            if ("`cache_hash'" == "`file_hash'" & "`cache_mode'" == "`yaml_mode'") {
                 if ("`frame'" != "") {
                     if ("`frame'" != "`cache_frame'") {
                         capture frame drop `frame'
@@ -204,10 +265,8 @@ program define yaml_read, rclass
                     frame `cache_frame' { quietly save `cache_tmp', replace }
                     quietly use `cache_tmp', clear
                 }
-                return scalar cache_hit = 1
-                return local yaml_source = "`using'"
-                return local yaml_mode = cond("`fastscan'" != "", "fastscan", "canonical")
-                exit 0
+                local cache_hit = 1
+                local skip_parse = 1
             }
         }
     }
@@ -284,14 +343,14 @@ program define yaml_read, rclass
     }
 
     * Fast-scan path (opt-in)
-    if ("`fastscan'" != "") {
+    if ("`fastscan'" != "" & `skip_parse' == 0) {
         if (`use_frame' == 1) {
             frame `frame' {
-                _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'")
+                _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
             }
         }
         else {
-            _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'")
+            _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
         }
 
         * Cache fastscan results if requested
@@ -318,36 +377,74 @@ program define yaml_read, rclass
         return scalar cache_hit = 0
         exit 0
     }
+
+    * Fast-scan cache hit (skip parse)
+    if ("`fastscan'" != "" & `skip_parse' == 1) {
+        return local yaml_source = "`using'"
+        return local yaml_mode = "fastscan"
+        return scalar cache_hit = 1
+        exit 0
+    }
     
-    * Read file line by line
-    tempname fh
-    file open `fh' using "`using'", read text
-    
-    local linenum = 0
-    local current_indent = 0
-    local parent_stack ""
-    local n_levels = 1
-    local indent_1 = 0
-    local parent_1 ""
-    local list_index = 0
+    * Early-exit targets (canonical)
+    local earlyexit_on = ("`earlyexit'" != "" | "`targets'" != "")
+    local n_targets = 0
+    if ("`targets'" != "") {
+        local targets_list = lower("`targets'")
+        local targets_list = subinstr("`targets_list'", ";", " ", .)
+        foreach t of local targets_list {
+            local n_targets = `n_targets' + 1
+            local target`n_targets' = subinstr("`t'", "-", "_", .)
+            local target`n_targets' = subinstr("`target`n_targets''", " ", "_", .)
+            local target`n_targets' = subinstr("`target`n_targets''", ".", "_", .)
+            local found`n_targets' = 0
+        }
+    }
+    local found_count = 0
+
+    if (`skip_parse' == 0) {
+        * Read file line by line
+        tempname fh
+        file open `fh' using "`using'", read text
+        
+        local linenum = 0
+        local current_indent = 0
+        local parent_stack ""
+        local n_levels = 1
+        local indent_1 = 0
+        local parent_1 ""
+        local list_index = 0
         file read `fh' line
-    
-    while r(eof) == 0 {
+        
+        while r(eof) == 0 {
         local linenum = `linenum' + 1
         
         * Skip empty lines and comments
-        local trimmed = strtrim("`line'")
+        local trimmed = ""
+        local indent = 0
+        local is_list = 0
+        if ("`stream'" != "") {
+            _yaml_tokenize_line, line(`"`line'"')
+            local trimmed "`s(trimmed)'"
+            local indent = `s(indent)'
+            local is_list = `s(is_list)'
+        }
+        else {
+            local trimmed = strtrim("`line'")
+            if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
+                file read `fh' line
+                continue
+            }
+            * Calculate indentation (count leading spaces)
+            local templine "`line'"
+            while (substr("`templine'", 1, 1) == " ") {
+                local indent = `indent' + 1
+                local templine = substr("`templine'", 2, .)
+            }
+        }
         if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
             file read `fh' line
             continue
-        }
-        
-        * Calculate indentation (count leading spaces)
-        local indent = 0
-        local templine "`line'"
-        while (substr("`templine'", 1, 1) == " ") {
-            local indent = `indent' + 1
-            local templine = substr("`templine'", 2, .)
         }
         
         * Handle indent changes to track parent hierarchy
@@ -388,7 +485,9 @@ program define yaml_read, rclass
         if (`level' > `max_level') local max_level = `level'
         
         * Check if it's a list item (starts with -)
-        local is_list = (substr("`trimmed'", 1, 2) == "- ")
+        if ("`stream'" == "") {
+            local is_list = (substr("`trimmed'", 1, 2) == "- ")
+        }
         
         if (`is_list') {
             * List item - store as separate row with type "list_item"
@@ -453,6 +552,21 @@ program define yaml_read, rclass
             if ("`locals'" != "") {
                 local `prefix'`last_key' "``prefix'`last_key'' `item_value'"
             }
+
+            * Early-exit check for targets
+            if (`earlyexit_on' & `n_targets' > 0) {
+                local key_check = lower("`full_key'")
+                forvalues ti = 1/`n_targets' {
+                    if (`found`ti'' == 0 & "`key_check'" == "`target`ti''") {
+                        local found`ti' = 1
+                        local found_count = `found_count' + 1
+                    }
+                }
+                if (`found_count' == `n_targets') {
+                    file close `fh'
+                    continue, break
+                }
+            }
         }
         else {
             * Reset list index when we encounter a non-list item
@@ -502,7 +616,7 @@ program define yaml_read, rclass
                 * Determine type and save current parent for storage
                 local this_parent "`parent_stack'"
                 
-                if ("`value'" == "") {
+                if ("`value'" != "") {
                     local vtype "parent"
                     * This key becomes a parent for nested items AFTER storing
                     local last_key "`full_key'"
@@ -586,13 +700,53 @@ program define yaml_read, rclass
                         di as text "  scalar `prefix'`short_key' = " as result `value'
                     }
                 }
+
+                * Early-exit check for targets
+                if (`earlyexit_on' & `n_targets' > 0) {
+                    local key_check = lower("`full_key'")
+                    forvalues ti = 1/`n_targets' {
+                        if (`found`ti'' == 0 & "`key_check'" == "`target`ti''") {
+                            local found`ti' = 1
+                            local found_count = `found_count' + 1
+                        }
+                    }
+                    if (`found_count' == `n_targets') {
+                        file close `fh'
+                        continue, break
+                    }
+                }
             }
         }
         
         file read `fh' line
     }
     
-    file close `fh'
+        file close `fh'
+    }
+
+    * If cache hit, derive counts from loaded data
+    if (`skip_parse' == 1) {
+        if (`use_frame' == 1) {
+            frame `frame' {
+                count
+                local n_keys = r(N)
+                capture confirm variable level
+                if (_rc == 0) {
+                    qui summarize level, meanonly
+                    local max_level = r(max)
+                }
+            }
+        }
+        else {
+            count
+            local n_keys = r(N)
+            capture confirm variable level
+            if (_rc == 0) {
+                qui summarize level, meanonly
+                local max_level = r(max)
+            }
+        }
+    }
 
     * Apply fields() filter (canonical parse)
     if ("`fields'" != "") {
@@ -659,6 +813,43 @@ program define yaml_read, rclass
         }
     }
     
+    * Materialize index frame if requested (canonical)
+    if ("`index_frame'" != "") {
+        tempfile idx_tmp
+        if (`use_frame' == 1) {
+            frame `frame' {
+                preserve
+                keep key value parent type
+                sort key
+                quietly save `idx_tmp', replace
+                restore
+            }
+        }
+        else {
+            preserve
+            keep key value parent type
+            sort key
+            quietly save `idx_tmp', replace
+            restore
+        }
+        capture frame drop `index_frame'
+        frame create `index_frame'
+        frame `index_frame' {
+            quietly use `idx_tmp', clear
+            char _dta[yaml_source] "`using'"
+            char _dta[yaml_checksum] "`file_hash'"
+            char _dta[yaml_mode] "canonical"
+        }
+        if (`use_frame' == 1) {
+            frame `frame' {
+                char _dta[yaml_index_frame] "`index_frame'"
+            }
+        }
+        else {
+            char _dta[yaml_index_frame] "`index_frame'"
+        }
+    }
+
     * Cache canonical results if requested
     if ("`cache_frame'" != "") {
         if (`use_frame' == 1) {
@@ -683,7 +874,7 @@ program define yaml_read, rclass
     return scalar n_keys = `n_keys'
     return scalar max_level = `max_level'
     return local yaml_mode "canonical"
-    return scalar cache_hit = 0
+    return scalar cache_hit = `cache_hit'
     
     if ("`verbose'" != "") {
         di as text ""
@@ -935,6 +1126,7 @@ program define yaml_get, rclass
     
     * Determine source - frame or current data
     local use_frame = 0
+    local index_frame ""
     if ("`frame'" != "") {
         * Check Stata version for frames
         if (`c(stata_version)' < 16) {
@@ -952,6 +1144,9 @@ program define yaml_get, rclass
             exit 198
         }
         local use_frame = 1
+        frame `frame' {
+            capture local index_frame : char _dta[yaml_index_frame]
+        }
     }
     else {
         * Use current dataset (default)
@@ -960,6 +1155,7 @@ program define yaml_get, rclass
             di as err "No YAML data in current dataset. Load with 'yaml read using file.yaml, replace'"
             exit 198
         }
+        capture local index_frame : char _dta[yaml_index_frame]
     }
     
     * Clean up keyname (remove quotes if present)
@@ -986,13 +1182,13 @@ program define yaml_get, rclass
     * Search for attributes
     if (`use_frame' == 1) {
         frame `frame' {
-            _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet'
+            _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet' indexframe("`index_frame'")
         }
         * Return values are set by _yaml_get_impl via return add
         return add
     }
     else {
-        _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet'
+        _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet' indexframe("`index_frame'")
         return add
     }
     
@@ -1004,7 +1200,7 @@ program define yaml_get, rclass
 end
 
 program define _yaml_get_impl, rclass
-    syntax anything(name=search_prefix) [, ATTRibutes(string) Quiet]
+    syntax anything(name=search_prefix) [, ATTRibutes(string) Quiet INDEXFRAME(string)]
     
     * Clean up search prefix - remove any quotes
     local search_prefix = subinstr(`"`search_prefix'"', `"""', "", .)
@@ -1020,7 +1216,99 @@ program define _yaml_get_impl, rclass
     * Check if parent variable exists
     capture confirm variable parent
     local has_parent = (_rc == 0)
-    
+
+    * If index frame provided, use it for faster filtering
+    local used_index = 0
+    if ("`indexframe'" != "") {
+        capture frame `indexframe': describe, short
+        if (_rc == 0) {
+            frame `indexframe' {
+                preserve
+                capture confirm variable parent
+                local has_parent = (_rc == 0)
+
+                if ("`attributes'" == "") {
+                    if (`has_parent') {
+                        keep if parent == "`search_prefix'" & type != "parent"
+                    }
+                    else {
+                        keep if strpos(key, "`search_prefix'") == 1
+                    }
+                    sort key
+                    local n = _N
+                    forvalues i = 1/`n' {
+                        local k = key[`i']
+                        local v = value[`i']
+                        local t = type[`i']
+                        if (`has_parent') {
+                            local plen = length("`search_prefix'")
+                            if (substr("`k'", 1, `plen') == "`search_prefix'" & substr("`k'", `plen'+1, 1) == "_") {
+                                local attr_name = substr("`k'", `plen' + 2, .)
+                            }
+                            else {
+                                local attr_name "`k'"
+                            }
+                            local found = 1
+                            local n_attrs = `n_attrs' + 1
+                            return local `attr_name' `"`v'"'
+                            if ("`quiet'" == "") {
+                                di as text "  `attr_name': " as result `"`v'"'
+                            }
+                        }
+                        else {
+                            local prefix_len = length("`search_prefix'")
+                            if (substr("`k'", 1, `prefix_len') == "`search_prefix'") {
+                                local remainder = substr("`k'", `prefix_len' + 1, .)
+                                if (substr("`remainder'", 1, 1) == "_") {
+                                    local attr_name = substr("`remainder'", 2, .)
+                                    if (strpos("`attr_name'", "_") == 0 & "`t'" != "parent") {
+                                        local found = 1
+                                        local n_attrs = `n_attrs' + 1
+                                        return local `attr_name' `"`v'"'
+                                        if ("`quiet'" == "") {
+                                            di as text "  `attr_name': " as result `"`v'"'
+                                        }
+                                    }
+                                }
+                                else if ("`remainder'" == "" & "`t'" != "parent") {
+                                    local found = 1
+                                    local n_attrs = `n_attrs' + 1
+                                    return local value `"`v'"'
+                                    if ("`quiet'" == "") {
+                                        di as text "  value: " as result `"`v'"'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    foreach attr of local attributes {
+                        local target_key "`search_prefix'_`attr'"
+                        keep if key == "`target_key'"
+                        if (_N > 0) {
+                            local v = value[1]
+                            local found = 1
+                            local n_attrs = `n_attrs' + 1
+                            return local `attr' `"`v'"'
+                            if ("`quiet'" == "") {
+                                di as text "  `attr': " as result `"`v'"'
+                            }
+                        }
+                        restore, preserve
+                    }
+                }
+                restore
+            }
+            local used_index = 1
+        }
+    }
+    if (`used_index') {
+        return scalar found = `found'
+        return scalar n_attrs = `n_attrs'
+        exit
+    }
+
     * If no specific attributes requested, get all
     if ("`attributes'" == "") {
         * Find all children of this key using parent variable
@@ -1859,7 +2147,7 @@ end
 program define _yaml_fastscan
     version 14.0
 
-    syntax using/ [, FIELDS(string) LISTKEYS(string)]
+    syntax using/ [, FIELDS(string) LISTKEYS(string) BLOCKSCALARS]
 
     local fields_list = lower("`fields'")
     local fields_list = subinstr("`fields_list'", ";", " ", .)
@@ -1878,14 +2166,30 @@ program define _yaml_fastscan
     local current_indent = 0
     local n_levels = 0
 
+    local has_pending = 0
+    local pending_line ""
+
     file read `fh' line
-    while r(eof) == 0 {
+    while r(eof) == 0 | `has_pending' == 1 {
+        if (`has_pending' == 1) {
+            local line "`pending_line'"
+            local has_pending = 0
+        }
         local linenum = `linenum' + 1
 
         local trimmed = strtrim("`line'")
         if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
-            file read `fh' line
+            if (`has_pending' == 0) file read `fh' line
             continue
+        }
+
+        * Unsupported YAML features in fastscan
+        if (regexm("`trimmed'", "^&") | regexm("`trimmed'", "^\*") | ///
+            regexm("`trimmed'", "^<<:") | strpos("`trimmed'", "{") > 0 | ///
+            strpos("`trimmed'", "}") > 0 | strpos("`trimmed'", "[") > 0 | ///
+            strpos("`trimmed'", "]") > 0) {
+            di as err "fastscan unsupported YAML feature at line `linenum'. Rerun without fastscan."
+            exit 198
         }
 
         * Count indent
@@ -1927,7 +2231,7 @@ program define _yaml_fastscan
                 qui replace line = `linenum' in `newobs'
             }
 
-            file read `fh' line
+            if (`has_pending' == 0) file read `fh' line
             continue
         }
 
@@ -1963,6 +2267,38 @@ program define _yaml_fastscan
                 * Field with value
                 local current_field "`left'"
                 local value = "`right'"
+                if ("`blockscalars'" == "" & inlist("`value'", "|", "|-", ">", ">-")) {
+                    di as err "fastscan unsupported block scalar at line `linenum'. Rerun without fastscan or use blockscalars."
+                    exit 198
+                }
+                * Optional block scalar capture
+                if ("`blockscalars'" != "" & inlist("`value'", "|", "|-", ">", ">-")) {
+                    local block_indent = `indent'
+                    local block_val ""
+                    file read `fh' line
+                    while (r(eof) == 0) {
+                        local next_trim = strtrim("`line'")
+                        local next_indent = 0
+                        local tmp "`line'"
+                        while (substr("`tmp'", 1, 1) == " ") {
+                            local next_indent = `next_indent' + 1
+                            local tmp = substr("`tmp'", 2, .)
+                        }
+                        if (`next_indent' <= `block_indent') {
+                            local pending_line "`line'"
+                            local has_pending = 1
+                            continue, break
+                        }
+                        if ("`block_val'" == "") {
+                            local block_val = strtrim("`line'")
+                        }
+                        else {
+                            local block_val = "`block_val'" + char(10) + strtrim("`line'")
+                        }
+                        file read `fh' line
+                    }
+                    local value "`block_val'"
+                }
                 if (substr("`value'", 1, 1) == `"""' | substr("`value'", 1, 1) == "'") {
                     local value = substr("`value'", 2, length("`value'") - 2)
                 }
@@ -1987,7 +2323,7 @@ program define _yaml_fastscan
             }
         }
 
-        file read `fh' line
+        if (`has_pending' == 0) file read `fh' line
     }
 
     file close `fh'
@@ -2000,4 +2336,27 @@ program define _yaml_fastscan
     label variable value "Field value"
     label variable list "List item flag"
     label variable line "Line number"
+end
+
+
+*******************************************************************************
+* Tokenize a YAML line (streaming canonical parser helper)
+*******************************************************************************
+
+program define _yaml_tokenize_line, sclass
+    version 14.0
+    syntax, line(string)
+
+    local trimmed = strtrim("`line'")
+    local indent = 0
+    local templine "`line'"
+    while (substr("`templine'", 1, 1) == " ") {
+        local indent = `indent' + 1
+        local templine = substr("`templine'", 2, .)
+    }
+    local is_list = (substr("`trimmed'", 1, 2) == "- ")
+
+    sreturn local trimmed "`trimmed'"
+    sreturn local indent "`indent'"
+    sreturn local is_list "`is_list'"
 end
