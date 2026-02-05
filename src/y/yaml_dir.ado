@@ -32,9 +32,8 @@ program define yaml_dir, rclass
     * Check frames (Stata 16+)
     if (`c(stata_version)' >= 16) {
         quietly frames dir
-        local nframes = r(n)
-        forvalues i = 1/`nframes' {
-            local fname = r(frame`i')
+        local all_frames `r(frames)'
+        foreach fname of local all_frames {
             if (substr("`fname'", 1, 5) == "yaml_") {
                 local count = `count' + 1
                 if ("`detail'" != "") {

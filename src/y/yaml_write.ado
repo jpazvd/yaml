@@ -7,8 +7,7 @@
 program define yaml_write
     version 14.0
     
-    syntax using/ [, Scalars(string) FRAME(string) Replace Verbose ///
-                     INDENT(integer 2) HEADER(string)]
+    syntax using/ [, Scalars(string) FRAME(string) Replace Verbose INDENT(integer 2) HEADER(string)]
     
     * If frame specified, add yaml_ prefix if not present
     if ("`frame'" != "") {
@@ -62,11 +61,69 @@ program define yaml_write
                 exit 198
             }
             frame `frame' {
-                _yaml_write_impl `fh', indent(`indent') verbose(`verbose')
+                * Ensure required variables exist
+                capture confirm variable key value level type
+                if (_rc != 0) {
+                    di as err "Data must include key, value, level, type variables. Use yaml read first."
+                    exit 198
+                }
+
+                sort key
+                local n = _N
+                forvalues i = 1/`n' {
+                    local k = key[`i']
+                    local v = value[`i']
+                    local l = level[`i']
+                    local t = type[`i']
+
+                    local spaces ""
+                    forvalues j = 1/`=`l'-1' {
+                        local spaces "`spaces' "
+                    }
+
+                    if ("`t'" == "parent") {
+                        file write `fh' "`spaces'`k':" _n
+                    }
+                    else if ("`t'" == "list_item") {
+                        file write `fh' "`spaces'- `v'" _n
+                    }
+                    else {
+                        file write `fh' "`spaces'`k': `v'" _n
+                    }
+                }
             }
         }
         else {
-            _yaml_write_impl `fh', indent(`indent') verbose(`verbose')
+            * Ensure required variables exist
+            capture confirm variable key value level type
+            if (_rc != 0) {
+                di as err "Data must include key, value, level, type variables. Use yaml read first."
+                exit 198
+            }
+
+            sort key
+            local n = _N
+            forvalues i = 1/`n' {
+                local k = key[`i']
+                local v = value[`i']
+                local l = level[`i']
+                local t = type[`i']
+
+                local spaces ""
+                forvalues j = 1/`=`l'-1' {
+                    local spaces "`spaces' "
+                }
+
+                if ("`t'" == "parent") {
+                    file write `fh' "`spaces'`k':" _n
+                }
+                else if ("`t'" == "list_item") {
+                    file write `fh' "`spaces'- `v'" _n
+                }
+                else {
+                    file write `fh' "`spaces'`k': `v'" _n
+                }
+            }
         }
     }
     
@@ -74,45 +131,5 @@ program define yaml_write
     
     if ("`verbose'" != "") {
         di as text "YAML written to `using'"
-    }
-end
-
-program define _yaml_write_impl
-    syntax name(fh) [, INDENT(integer 2) VERBOSE]
-    
-    * Ensure required variables exist
-    capture confirm variable key value level type
-    if (_rc != 0) {
-        di as err "Data must include key, value, level, type variables. Use yaml read first."
-        exit 198
-    }
-    
-    * Sort by key for consistent output
-    sort key
-    
-    * Write data
-    local n = _N
-    forvalues i = 1/`n' {
-        local k = key[`i']
-        local v = value[`i']
-        local l = level[`i']
-        local t = type[`i']
-        
-        * Create indentation
-        local spaces ""
-        forvalues j = 1/`=`l'-1' {
-            local spaces "`spaces'" + " "
-        }
-        
-        * Write YAML line
-        if ("`t'" == "parent") {
-            file write `fh' "`spaces'`k':" _n
-        }
-        else if ("`t'" == "list_item") {
-            file write `fh' "`spaces'- `v'" _n
-        }
-        else {
-            file write `fh' "`spaces'`k': `v'" _n
-        }
     }
 end

@@ -10,6 +10,12 @@ program define yaml_list, rclass
     syntax [anything(name=parent)] [, Frame(string) Keys Values Separator(string) ///
                                       Children STata NoHeader]
     
+    local keys_opt = cond("`keys'" != "", "keys", "")
+    local values_opt = cond("`values'" != "", "values", "")
+    local children_opt = cond("`children'" != "", "children", "")
+    local stata_opt = cond("`stata'" != "", "stata", "")
+    local noheader_opt = cond("`noheader'" != "", "noheader", "")
+
     * If frame specified, add yaml_ prefix if not present
     if ("`frame'" != "") {
         if (`c(stata_version)' < 16) {
@@ -29,13 +35,13 @@ program define yaml_list, rclass
         
         * Run list in frame context
         frame `frame' {
-            _yaml_list_impl "`parent'", keys(`keys') values(`values') separator("`separator'") children(`children') stata(`stata') noheader(`noheader')
+            _yaml_list_impl "`parent'", `keys_opt' `values_opt' separator("`separator'") `children_opt' `stata_opt' `noheader_opt'
         }
         return add
     }
     else {
         * Use current dataset
-        _yaml_list_impl "`parent'", keys(`keys') values(`values') separator("`separator'") children(`children') stata(`stata') noheader(`noheader')
+        _yaml_list_impl "`parent'", `keys_opt' `values_opt' separator("`separator'") `children_opt' `stata_opt' `noheader_opt'
         return add
     }
 end

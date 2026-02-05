@@ -21,9 +21,8 @@ program define yaml_frames, rclass
     di as text "{hline 60}"
     
     quietly frames dir
-    local nframes = r(n)
-    forvalues i = 1/`nframes' {
-        local fname = r(frame`i')
+    local all_frames `r(frames)'
+    foreach fname of local all_frames {
         if (substr("`fname'", 1, 5) == "yaml_") {
             local frame_count = `frame_count' + 1
             if ("`detail'" != "") {
