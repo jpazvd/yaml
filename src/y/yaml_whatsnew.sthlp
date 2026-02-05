@@ -14,6 +14,13 @@ This file tracks feature updates to the {cmd:yaml} command.
 {marker history}{...}
 {title:Version history}
 
+{pstd}{bf:1.5.0} (04Feb2026)
+{p 4 8 2}- Added canonical early-exit targets and streaming tokenization options.{p_end}
+{p 4 8 2}- Added index frame materialization for repeated queries (Stata 16+).{p_end}
+{p 4 8 2}- Added fast-scan block-scalar capture and unsupported-feature checks.{p_end}
+{p 4 8 2}- Added file readability and empty-file checks for yaml read.{p_end}
+{p 4 8 2}- Added benchmark script and performance targets in scripts/benchmark_yaml_parse.do.{p_end}
+
 {pstd}{bf:1.4.0} (04Feb2026)
 {p 4 8 2}- Added {cmd:fastscan} mode for speed-first parsing of large, regular YAML files.{p_end}
 {p 4 8 2}- Added {cmd:fields()} to restrict extraction to specific keys.{p_end}

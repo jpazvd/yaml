@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.4.0  04Feb2026}{...}
+{* *! version 1.5.0  04Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -82,11 +82,20 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt fastscan}}use fast-scan parser (speed-first, limited YAML subset){p_end}
 {synopt:{opt fields(string)}}restrict extraction to specific field keys{p_end}
 {synopt:{opt listkeys(string)}}extract list blocks for specified fields (fastscan only){p_end}
+{synopt:{opt blockscalars}}capture block scalars in fast-scan mode (opt-in){p_end}
+{synopt:{opt targets(string)}}early-exit targets for canonical parse (exact keys){p_end}
+{synopt:{opt earlyexit}}stop parsing once all targets are found (canonical){p_end}
+{synopt:{opt stream}}use streaming tokenization for canonical parse{p_end}
+{synopt:{opt index(string)}}materialize an index frame for repeated queries (Stata 16+){p_end}
 {synopt:{opt cache(string)}}cache parsed results in a frame (Stata 16+){p_end}
 {synoptline}
 
 {pstd}
 {opt fastscan} is not compatible with {opt locals} or {opt scalars}.
+
+{pstd}
+{opt targets()} and {opt earlyexit} apply to canonical parsing only and are not supported
+with {opt fastscan}.
 
 {pstd}
 {opt cache()} accepts a frame name (e.g., {cmd:cache(mycache)}) or a named form
@@ -460,6 +469,7 @@ The {opt frame()} option requires Stata 16.0 or later.
 {cmd:fastscan} mode is optimized for shallow mappings and list blocks, and does not
 support anchors, aliases, or complex nested structures. Use the canonical parser
 for full YAML compliance.
+Block scalars can be captured in fast-scan mode by adding {opt blockscalars}.
 
 
 {marker author}{...}

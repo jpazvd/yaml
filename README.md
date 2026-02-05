@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.4.0 with fast-scan parsing, field-selective extraction, and frame caching for speed-first metadata workflows.
+**Latest:** v1.5.0 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-scan support.
 
 ### Key Features
 
@@ -130,6 +130,11 @@ yaml read using filename.yaml [, options]
 - `fastscan` - Speed-first parsing for large, regular YAML
 - `fields(string)` - Restrict extraction to specific keys
 - `listkeys(string)` - Extract list blocks for specified keys (fastscan only)
+- `blockscalars` - Capture block scalars in fast-scan mode
+- `targets(string)` - Early-exit targets for canonical parse (exact keys)
+- `earlyexit` - Stop parsing once all targets are found (canonical)
+- `stream` - Use streaming tokenization for canonical parse
+- `index(string)` - Materialize an index frame for repeated queries (Stata 16+)
 - `cache(string)` - Cache parsed results in a frame (Stata 16+)
 
 ## What's New
