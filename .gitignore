@@ -12,6 +12,8 @@
 *.out
 *.synctex.gz
 *.toc
+!stata.toc
+!src/stata.toc
 *.lof
 *.lot
 *.fls
