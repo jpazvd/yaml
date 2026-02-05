@@ -58,6 +58,14 @@ if _rc {
     display as error "Frame support requires Stata 16+"
 }
 
+* Example 3: Fast-scan for large metadata (opt-in)
+display as text "--- Fast-scan indicators.yaml (fields + listkeys + cache) ---"
+yaml read using "`datadir'/indicators.yaml", fastscan ///
+    fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
+list in 1/5, clean noobs
+display _n
+
 * ==============================================================================
 * SECTION: yaml describe
 * Display structure of loaded YAML data
