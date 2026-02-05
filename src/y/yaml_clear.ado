@@ -19,9 +19,8 @@ program define yaml_clear
             }
             
             quietly frames dir
-            local nframes = r(n)
-            forvalues i = 1/`nframes' {
-                local fname = r(frame`i')
+            local frames "`r(frames)'"
+            foreach fname of local frames {
                 if (substr("`fname'", 1, 5) == "yaml_") {
                     capture frame drop `fname'
                 }
