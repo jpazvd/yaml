@@ -36,3 +36,4 @@ log close
 - Examples use relative paths (`../src/y` for ado files, `data/` for YAML files)
 - `test_yaml_unicef_integration.do` requires the full unicefData repository and won't run standalone
 - Frame-related tests (17-24 in `test_yaml.do`) require Stata 16+
+- Fast-scan examples are in `yaml_basic_examples.do` and `test_yaml.do`

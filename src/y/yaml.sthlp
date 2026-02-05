@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.3.0  04Dec2025}{...}
+{* *! version 1.4.0  04Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -64,7 +64,8 @@ Stata 16 or later.
 {p 8 17 2}
 {cmd:yaml read}
 {cmd:using} {it:filename}
-[{cmd:,} {opt frame(name)} {opt l:ocals} {opt s:calars} {opt p:refix(string)} {opt replace} {opt v:erbose}]
+[{cmd:,} {opt frame(name)} {opt l:ocals} {opt s:calars} {opt p:refix(string)} {opt replace} {opt v:erbose}
+{opt fastscan} {opt fields(string)} {opt listkeys(string)} {opt cache(string)}]
 
 {pstd}
 Reads a YAML file and parses its contents into the current dataset (default) or a frame.
@@ -78,16 +79,35 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt p:refix(string)}}prefix for macro/scalar names; default is "yaml_"{p_end}
 {synopt:{opt replace}}replace existing data in memory{p_end}
 {synopt:{opt v:erbose}}display parsing progress{p_end}
+{synopt:{opt fastscan}}use fast-scan parser (speed-first, limited YAML subset){p_end}
+{synopt:{opt fields(string)}}restrict extraction to specific field keys{p_end}
+{synopt:{opt listkeys(string)}}extract list blocks for specified fields (fastscan only){p_end}
+{synopt:{opt cache(string)}}cache parsed results in a frame (Stata 16+){p_end}
 {synoptline}
 
 {pstd}
-The following variables are created:
+{opt fastscan} is not compatible with {opt locals} or {opt scalars}.
+
+{pstd}
+{opt cache()} accepts a frame name (e.g., {cmd:cache(mycache)}) or a named form
+{cmd:cache(frame=mycache)}. The stored frame is prefixed as {cmd:yaml_} if not already.
+
+{pstd}
+The following variables are created in canonical mode:
 {p_end}
 {phang2}{cmd:key} - Full key name (nested keys use underscore separator){p_end}
 {phang2}{cmd:value} - Value as string{p_end}
 {phang2}{cmd:level} - Nesting level (1 = root){p_end}
 {phang2}{cmd:parent} - Parent key name{p_end}
 {phang2}{cmd:type} - Value type (string, numeric, boolean, null, parent){p_end}
+
+{pstd}
+In {opt fastscan} mode, the following variables are created:{p_end}
+{phang2}{cmd:key} - Top-level key (e.g., indicator code){p_end}
+{phang2}{cmd:field} - Field name under the key{p_end}
+{phang2}{cmd:value} - Field value{p_end}
+{phang2}{cmd:list} - 1 if list item, 0 otherwise{p_end}
+{phang2}{cmd:line} - Line number in the YAML file{p_end}
 
 
 {marker write}{...}
@@ -301,6 +321,13 @@ Clears YAML data from memory.
 {phang2}// Creates frame yaml_config, preserves current dataset{p_end}
 
 {pstd}
+{bf:Example 2b: Fast-scan for large metadata (opt-in)}{p_end}
+
+{phang2}{cmd:. yaml read using "indicators.yaml", fastscan fields(name description source_id topic_ids) }{p_end}
+{phang2}{cmd:.     listkeys(topic_ids topic_names) cache(ind_cache)}{p_end}
+{phang2}{cmd:. list in 1/5}{p_end}
+
+{pstd}
 {bf:Example 3: Work with multiple YAML files using frames}{p_end}
 
 {phang2}{cmd:. yaml read using "config.yaml", frame(cfg)}{p_end}
@@ -398,6 +425,8 @@ Clears YAML data from memory.
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:r(filename)}}name of file read{p_end}
 {synopt:{cmd:r(frame)}}name of frame created (if frame option used){p_end}
+{synopt:{cmd:r(yaml_mode)}}parsing mode: {cmd:canonical} or {cmd:fastscan}{p_end}
+{synopt:{cmd:r(cache_hit)}}1 if cache was used, 0 otherwise{p_end}
 {synopt:{cmd:r(yaml_*)}}values from YAML file (when {opt locals} specified){p_end}
 
 {pstd}
@@ -426,6 +455,11 @@ The {opt frame()} option requires Stata 16.0 or later.
 {phang2}- Complex keys{p_end}
 {phang2}- Flow style ({c -(}key: value{c )-}){p_end}
 {phang2}- Document markers (---){p_end}
+
+{pstd}
+{cmd:fastscan} mode is optimized for shallow mappings and list blocks, and does not
+support anchors, aliases, or complex nested structures. Use the canonical parser
+for full YAML compliance.
 
 
 {marker author}{...}

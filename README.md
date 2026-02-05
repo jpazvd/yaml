@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.3.1 with production-tested optimization patterns for large metadata catalogs (700+ entries) achieving 50× performance improvement through vectorized frame-based queries.
+**Latest:** v1.4.0 with fast-scan parsing, field-selective extraction, and frame caching for speed-first metadata workflows.
 
 ### Key Features
 
@@ -19,6 +19,10 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Query values** using hierarchical key paths
 - **Validate configurations** with required keys and type checking
 - **Multiple frame support** (Stata 16+) for managing multiple configurations
+- **Fast-scan mode** for large metadata catalogs (opt-in)
+- **Field-selective extraction** with `fields()`
+- **List block extraction** with `listkeys()` (fast-scan)
+- **Frame caching** with `cache()` (Stata 16+)
 
 ## Installation
 
@@ -55,6 +59,10 @@ yaml validate, required(name version database)
 
 * Write modified configuration
 yaml write using output.yaml, replace
+
+* Speed-first metadata read (fastscan)
+yaml read using indicators.yaml, fastscan fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
 ```
 
 ## Architecture
@@ -119,6 +127,14 @@ yaml read using filename.yaml [, options]
 - `scalars` - Store numeric values as scalars
 - `prefix(string)` - Prefix for local/scalar names (default: `yaml_`)
 - `verbose` - Display parsing details
+- `fastscan` - Speed-first parsing for large, regular YAML
+- `fields(string)` - Restrict extraction to specific keys
+- `listkeys(string)` - Extract list blocks for specified keys (fastscan only)
+- `cache(string)` - Cache parsed results in a frame (Stata 16+)
+
+## What's New
+
+See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ### yaml write
 
@@ -240,6 +256,18 @@ YAML data is stored in a flat dataset with hierarchical references:
 | `level` | int | Nesting depth (0 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
+
+### Fast-Scan Output Schema
+
+In `fastscan` mode, the output is row-wise and minimal:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | str244 | Top-level key (e.g., indicator code) |
+| `field` | str244 | Field name under the key |
+| `value` | str2000 | Field value |
+| `list` | byte | 1 if list item, 0 otherwise |
+| `line` | long | Line number in the YAML file |
 
 ### Key Naming Convention
 

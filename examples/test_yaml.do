@@ -20,6 +20,23 @@ list in 1/10, clean noobs
 
 di as text ""
 di as text "{hline 70}"
+di as text "{bf:TEST 1b: Fast-scan read with fields/listkeys + cache}"
+di as text "{hline 70}"
+
+yaml read using "data/indicators.yaml", fastscan ///
+    fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
+
+di as text "Fast-scan output (first 5 rows):"
+list in 1/5, clean noobs
+
+yaml read using "data/indicators.yaml", fastscan ///
+    fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
+di as text "Cache hit (expect 1): " r(cache_hit)
+
+di as text ""
+di as text "{hline 70}"
 di as text "{bf:TEST 2: Read YAML with locals option}"
 di as text "{hline 70}"
 

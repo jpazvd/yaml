@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml
-*! v 1.3.1   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.4.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
 * v1.3.1: Fixed return value propagation from frame context in yaml_get and yaml_list
 *         Fixed hyphen-to-underscore normalization in yaml_get search prefix
@@ -109,8 +109,33 @@ end
 program define yaml_read, rclass
     version 14.0
     
-    syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose]
+    syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
+        FASTSCAN FIELDS(string) LISTKEYS(string) CACHE(string)]
     
+    * Validate option combinations
+    if ("`fastscan'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
+        di as err "fastscan is not compatible with locals/scalars"
+        exit 198
+    }
+    if ("`listkeys'" != "" & "`fastscan'" == "") {
+        di as err "listkeys() requires fastscan"
+        exit 198
+    }
+    if ("`fields'" != "") {
+        local fields_trim = strtrim(subinstr("`fields'", ";", " ", .))
+        if ("`fields_trim'" == "") {
+            di as err "fields() must include at least one key"
+            exit 198
+        }
+    }
+    if ("`listkeys'" != "") {
+        local list_trim = strtrim(subinstr("`listkeys'", ";", " ", .))
+        if ("`list_trim'" == "") {
+            di as err "listkeys() must include at least one key"
+            exit 198
+        }
+    }
+
     * Set default prefix
     if ("`prefix'" == "") {
         local prefix "yaml_"
@@ -118,6 +143,24 @@ program define yaml_read, rclass
     
     * Check file exists
     confirm file "`using'"
+
+    * Parse cache() option (Stata 16+)
+    local cache_frame ""
+    if ("`cache'" != "") {
+        if (`c(stata_version)' < 16) {
+            di as err "cache() option requires Stata 16 or later"
+            exit 198
+        }
+        if (strpos("`cache'", "frame=") == 1) {
+            local cache_frame = substr("`cache'", 7, .)
+        }
+        else {
+            local cache_frame "`cache'"
+        }
+        if (substr("`cache_frame'", 1, 5) != "yaml_") {
+            local cache_frame "yaml_`cache_frame'"
+        }
+    }
     
     * If frame specified, add yaml_ prefix if not present
     if ("`frame'" != "") {
@@ -131,6 +174,44 @@ program define yaml_read, rclass
         }
     }
     
+    * Compute file checksum if caching
+    local file_hash ""
+    if ("`cache_frame'" != "") {
+        capture checksum "`using'"
+        if (_rc != 0) {
+            di as err "checksum failed for: `using'"
+            exit 198
+        }
+        local file_hash = r(checksum)
+    }
+
+    * Cache hit? (Stata 16+)
+    if ("`cache_frame'" != "") {
+        capture frame `cache_frame': count
+        if (_rc == 0 & r(N) > 0) {
+            capture frame `cache_frame': local cache_hash : char _dta[yaml_checksum]
+            capture frame `cache_frame': local cache_mode : char _dta[yaml_mode]
+            if ("`cache_hash'" == "`file_hash'" & "`cache_mode'" == cond("`fastscan'" != "", "fastscan", "canonical")) {
+                if ("`frame'" != "") {
+                    if ("`frame'" != "`cache_frame'") {
+                        capture frame drop `frame'
+                        frame copy `cache_frame' `frame', replace
+                    }
+                    return local frame "`frame'"
+                }
+                else {
+                    tempfile cache_tmp
+                    frame `cache_frame' { quietly save `cache_tmp', replace }
+                    quietly use `cache_tmp', clear
+                }
+                return scalar cache_hit = 1
+                return local yaml_source = "`using'"
+                return local yaml_mode = cond("`fastscan'" != "", "fastscan", "canonical")
+                exit 0
+            }
+        }
+    }
+
     * Initialize
     local n_keys = 0
     local max_level = 0
@@ -152,11 +233,20 @@ program define yaml_read, rclass
         frame create `frame'
         frame `frame' {
             quietly {
-                gen str244 key = ""
-                gen str2000 value = ""
-                gen int level = .
-                gen str244 parent = ""
-                gen str32 type = ""
+                if ("`fastscan'" != "") {
+                    gen str244 key = ""
+                    gen str244 field = ""
+                    gen str2000 value = ""
+                    gen byte list = .
+                    gen long line = .
+                }
+                else {
+                    gen str244 key = ""
+                    gen str2000 value = ""
+                    gen int level = .
+                    gen str244 parent = ""
+                    gen str32 type = ""
+                }
             }
             * Set characteristic to track YAML source
             char _dta[yaml_source] "`using'"
@@ -173,15 +263,60 @@ program define yaml_read, rclass
         }
         clear
         quietly {
-            gen str244 key = ""
-            gen str2000 value = ""
-            gen int level = .
-            gen str244 parent = ""
-            gen str32 type = ""
+            if ("`fastscan'" != "") {
+                gen str244 key = ""
+                gen str244 field = ""
+                gen str2000 value = ""
+                gen byte list = .
+                gen long line = .
+            }
+            else {
+                gen str244 key = ""
+                gen str2000 value = ""
+                gen int level = .
+                gen str244 parent = ""
+                gen str32 type = ""
+            }
         }
         * Set characteristic to track YAML source
         char _dta[yaml_source] "`using'"
         local use_frame = 0
+    }
+
+    * Fast-scan path (opt-in)
+    if ("`fastscan'" != "") {
+        if (`use_frame' == 1) {
+            frame `frame' {
+                _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'")
+            }
+        }
+        else {
+            _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'")
+        }
+
+        * Cache fastscan results if requested
+        if ("`cache_frame'" != "") {
+            if (`use_frame' == 1) {
+                if ("`frame'" != "`cache_frame'") {
+                    capture frame drop `cache_frame'
+                    frame copy `frame' `cache_frame', replace
+                }
+            }
+            else {
+                capture frame drop `cache_frame'
+                frame put *, into(`cache_frame')
+            }
+            frame `cache_frame' {
+                char _dta[yaml_source] "`using'"
+                char _dta[yaml_checksum] "`file_hash'"
+                char _dta[yaml_mode] "fastscan"
+            }
+        }
+
+        return local yaml_source = "`using'"
+        return local yaml_mode = "fastscan"
+        return scalar cache_hit = 0
+        exit 0
     }
     
     * Read file line by line
@@ -458,6 +593,30 @@ program define yaml_read, rclass
     }
     
     file close `fh'
+
+    * Apply fields() filter (canonical parse)
+    if ("`fields'" != "") {
+        local fields_list = lower("`fields'")
+        local fields_list = subinstr("`fields_list'", ";", " ", .)
+        if (`use_frame' == 1) {
+            frame `frame' {
+                gen byte _keep = 0
+                foreach f of local fields_list {
+                    replace _keep = 1 if regexm(lower(key), "_`f'$") | lower(key) == "`f'"
+                }
+                keep if _keep
+                drop _keep
+            }
+        }
+        else {
+            gen byte _keep = 0
+            foreach f of local fields_list {
+                replace _keep = 1 if regexm(lower(key), "_`f'$") | lower(key) == "`f'"
+            }
+            keep if _keep
+            drop _keep
+        }
+    }
     
     * Clean up frame or dataset
     if (`use_frame' == 1) {
@@ -500,10 +659,31 @@ program define yaml_read, rclass
         }
     }
     
+    * Cache canonical results if requested
+    if ("`cache_frame'" != "") {
+        if (`use_frame' == 1) {
+            if ("`frame'" != "`cache_frame'") {
+                capture frame drop `cache_frame'
+                frame copy `frame' `cache_frame', replace
+            }
+        }
+        else {
+            capture frame drop `cache_frame'
+            frame put *, into(`cache_frame')
+        }
+        frame `cache_frame' {
+            char _dta[yaml_source] "`using'"
+            char _dta[yaml_checksum] "`file_hash'"
+            char _dta[yaml_mode] "canonical"
+        }
+    }
+
     * Return values
     return local filename "`using'"
     return scalar n_keys = `n_keys'
     return scalar max_level = `max_level'
+    return local yaml_mode "canonical"
+    return scalar cache_hit = 0
     
     if ("`verbose'" != "") {
         di as text ""
@@ -1669,4 +1849,155 @@ program define _yaml_pop_parents, sclass
     
     sreturn local indent_stack "`new_indent_stack'"
     sreturn local parent_stack "`new_parent_stack'"
+end
+
+
+*******************************************************************************
+* Fast-scan parser (opt-in): shallow mappings + list blocks
+*******************************************************************************
+
+program define _yaml_fastscan
+    version 14.0
+
+    syntax using/ [, FIELDS(string) LISTKEYS(string)]
+
+    local fields_list = lower("`fields'")
+    local fields_list = subinstr("`fields_list'", ";", " ", .)
+    local list_list = lower("`listkeys'")
+    local list_list = subinstr("`list_list'", ";", " ", .)
+
+    local use_fields = ("`fields_list'" != "")
+    local use_listkeys = ("`list_list'" != "")
+
+    tempname fh
+    file open `fh' using "`using'", read text
+
+    local linenum = 0
+    local current_key ""
+    local current_field ""
+    local current_indent = 0
+    local n_levels = 0
+
+    file read `fh' line
+    while r(eof) == 0 {
+        local linenum = `linenum' + 1
+
+        local trimmed = strtrim("`line'")
+        if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
+            file read `fh' line
+            continue
+        }
+
+        * Count indent
+        local indent = 0
+        local templine "`line'"
+        while (substr("`templine'", 1, 1) == " ") {
+            local indent = `indent' + 1
+            local templine = substr("`templine'", 2, .)
+        }
+
+        * List item
+        if (substr("`trimmed'", 1, 2) == "- ") {
+            local item_value = strtrim(substr("`trimmed'", 3, .))
+            if (substr("`item_value'", 1, 1) == `"""' | substr("`item_value'", 1, 1) == "'") {
+                local item_value = substr("`item_value'", 2, length("`item_value'") - 2)
+            }
+
+            local allow_list = 1
+            if (`use_listkeys') {
+                local allow_list = 0
+                foreach lk of local list_list {
+                    if (lower("`current_field'") == "`lk'") local allow_list = 1
+                }
+            }
+            else if (`use_fields') {
+                local allow_list = 0
+                foreach fk of local fields_list {
+                    if (lower("`current_field'") == "`fk'") local allow_list = 1
+                }
+            }
+
+            if (`allow_list' & "`current_key'" != "" & "`current_field'" != "") {
+                local newobs = _N + 1
+                qui set obs `newobs'
+                qui replace key = "`current_key'" in `newobs'
+                qui replace field = "`current_field'" in `newobs'
+                qui replace value = `"`item_value'"' in `newobs'
+                qui replace list = 1 in `newobs'
+                qui replace line = `linenum' in `newobs'
+            }
+
+            file read `fh' line
+            continue
+        }
+
+        * Key or field line
+        local colon_pos = strpos("`trimmed'", ":")
+        if (`colon_pos' > 0) {
+            local left = strtrim(substr("`trimmed'", 1, `colon_pos' - 1))
+            local right = strtrim(substr("`trimmed'", `colon_pos' + 1, .))
+
+            if ("`right'" == "") {
+                * Header (key)
+                if (`indent' > `current_indent') {
+                    local n_levels = `n_levels' + 1
+                    local indent_`n_levels' = `indent'
+                }
+                else if (`indent' < `current_indent') {
+                    local found_level = 1
+                    forvalues lv = `n_levels'(-1)1 {
+                        if (`indent_`lv'' <= `indent') {
+                            local found_level = `lv'
+                            continue, break
+                        }
+                    }
+                    local n_levels = `found_level'
+                }
+
+                local key_`n_levels' "`left'"
+                local current_indent = `indent'
+                local current_key "`key_`n_levels''"
+                local current_field ""
+            }
+            else {
+                * Field with value
+                local current_field "`left'"
+                local value = "`right'"
+                if (substr("`value'", 1, 1) == `"""' | substr("`value'", 1, 1) == "'") {
+                    local value = substr("`value'", 2, length("`value'") - 2)
+                }
+
+                local allow_field = 1
+                if (`use_fields') {
+                    local allow_field = 0
+                    foreach fk of local fields_list {
+                        if (lower("`current_field'") == "`fk'") local allow_field = 1
+                    }
+                }
+
+                if (`allow_field' & "`current_key'" != "") {
+                    local newobs = _N + 1
+                    qui set obs `newobs'
+                    qui replace key = "`current_key'" in `newobs'
+                    qui replace field = "`current_field'" in `newobs'
+                    qui replace value = `"`value'"' in `newobs'
+                    qui replace list = 0 in `newobs'
+                    qui replace line = `linenum' in `newobs'
+                }
+            }
+        }
+
+        file read `fh' line
+    }
+
+    file close `fh'
+
+    qui drop if key == ""
+    qui compress
+
+    label variable key "Top-level key"
+    label variable field "Field name"
+    label variable value "Field value"
+    label variable list "List item flag"
+    label variable line "Line number"
 end
