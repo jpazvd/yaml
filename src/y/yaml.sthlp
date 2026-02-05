@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.3.0  04Dec2025}{...}
+{* *! version 1.4.0  04Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -64,7 +64,8 @@ Stata 16 or later.
 {p 8 17 2}
 {cmd:yaml read}
 {cmd:using} {it:filename}
-[{cmd:,} {opt frame(name)} {opt l:ocals} {opt s:calars} {opt p:refix(string)} {opt replace} {opt v:erbose}]
+[{cmd:,} {opt frame(name)} {opt l:ocals} {opt s:calars} {opt p:refix(string)} {opt replace} {opt v:erbose}
+{opt fastscan} {opt fields(string)} {opt listkeys(string)} {opt cache(string)}]
 
 {pstd}
 Reads a YAML file and parses its contents into the current dataset (default) or a frame.
@@ -78,16 +79,35 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt p:refix(string)}}prefix for macro/scalar names; default is "yaml_"{p_end}
 {synopt:{opt replace}}replace existing data in memory{p_end}
 {synopt:{opt v:erbose}}display parsing progress{p_end}
+{synopt:{opt fastscan}}use fast-scan parser (speed-first, limited YAML subset){p_end}
+{synopt:{opt fields(string)}}restrict extraction to specific field keys{p_end}
+{synopt:{opt listkeys(string)}}extract list blocks for specified fields (fastscan only){p_end}
+{synopt:{opt cache(string)}}cache parsed results in a frame (Stata 16+){p_end}
 {synoptline}
 
 {pstd}
-The following variables are created:
+{opt fastscan} is not compatible with {opt locals} or {opt scalars}.
+
+{pstd}
+{opt cache()} accepts a frame name (e.g., {cmd:cache(mycache)}) or a named form
+{cmd:cache(frame=mycache)}. The stored frame is prefixed as {cmd:yaml_} if not already.
+
+{pstd}
+The following variables are created in canonical mode:
 {p_end}
 {phang2}{cmd:key} - Full key name (nested keys use underscore separator){p_end}
 {phang2}{cmd:value} - Value as string{p_end}
 {phang2}{cmd:level} - Nesting level (1 = root){p_end}
 {phang2}{cmd:parent} - Parent key name{p_end}
 {phang2}{cmd:type} - Value type (string, numeric, boolean, null, parent){p_end}
+
+{pstd}
+In {opt fastscan} mode, the following variables are created:{p_end}
+{phang2}{cmd:key} - Top-level key (e.g., indicator code){p_end}
+{phang2}{cmd:field} - Field name under the key{p_end}
+{phang2}{cmd:value} - Field value{p_end}
+{phang2}{cmd:list} - 1 if list item, 0 otherwise{p_end}
+{phang2}{cmd:line} - Line number in the YAML file{p_end}
 
 
 {marker write}{...}
