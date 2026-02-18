@@ -31,6 +31,11 @@ foreach arg of local args {
 		di as text "  EX-01    examples/test_yaml.do"
 		di as text "  EX-02    examples/test_yaml_improvements.do"
 		di as text "  EX-03    examples/yaml_basic_examples.do"
+		di as text ""
+		di as text "  Regression Tests:"
+		di as text "  REG-01   nested lists and parent hierarchy (BUG-1/BUG-2)"
+		di as text "  REG-02   frame return value propagation (BUG-3)"
+		di as text "  REG-03   subcommand abbreviations (desc, frame, check)"
 		exit
 	}
 	else {
@@ -221,6 +226,47 @@ if "`target_test'" == "" | "`target_test'" == "EX-03" {
 	}
 	else {
 		test_fail, id("EX-03") msg("yaml_basic_examples.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-01: nested lists and parent hierarchy (BUG-1/BUG-2)
+if "`target_test'" == "" | "`target_test'" == "REG-01" {
+	test_start, id("REG-01") desc("nested lists and parent hierarchy (BUG-1/BUG-2)")
+	capture quietly do "`qadir'/scripts/test_bug1_bug2.do"
+	if _rc == 0 {
+		test_pass, id("REG-01")
+	}
+	else {
+		test_fail, id("REG-01") msg("test_bug1_bug2.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-02: frame return value propagation (BUG-3)
+if "`target_test'" == "" | "`target_test'" == "REG-02" {
+	test_start, id("REG-02") desc("frame return value propagation (BUG-3)")
+	if `c(stata_version)' >= 16 {
+		capture quietly do "`qadir'/scripts/test_bug3_frame_returns.do"
+		if _rc == 0 {
+			test_pass, id("REG-02")
+		}
+		else {
+			test_fail, id("REG-02") msg("test_bug3_frame_returns.do failed (rc=`=_rc')")
+		}
+	}
+	else {
+		test_skip, id("REG-02") msg("requires Stata 16+ (frames)")
+	}
+}
+
+* REG-03: subcommand abbreviations (desc, frame, check)
+if "`target_test'" == "" | "`target_test'" == "REG-03" {
+	test_start, id("REG-03") desc("subcommand abbreviations (desc, frame, check)")
+	capture quietly do "`qadir'/scripts/test_abbreviations.do"
+	if _rc == 0 {
+		test_pass, id("REG-03")
+	}
+	else {
+		test_fail, id("REG-03") msg("test_abbreviations.do failed (rc=`=_rc')")
 	}
 }
 
