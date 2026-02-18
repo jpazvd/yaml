@@ -1,10 +1,10 @@
 *******************************************************************************
-* _yaml_fastscan
+* _yaml_fastread
 *! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
-* Fast-scan parser (opt-in): shallow mappings + list blocks
+* Fast-read parser (opt-in): shallow mappings + list blocks
 *******************************************************************************
 
-program define _yaml_fastscan
+program define _yaml_fastread
     version 14.0
 
     syntax using/ [, FIELDS(string) LISTKEYS(string) BLOCKSCALARS]
@@ -43,12 +43,12 @@ program define _yaml_fastscan
             continue
         }
 
-        * Unsupported YAML features in fastscan
+        * Unsupported YAML features in fastread
         if (regexm("`trimmed'", "^&") | regexm("`trimmed'", "^\\*") | ///
             regexm("`trimmed'", "^<<:") | strpos("`trimmed'", "{") > 0 | ///
             strpos("`trimmed'", "}") > 0 | strpos("`trimmed'", "[") > 0 | ///
             strpos("`trimmed'", "]") > 0) {
-            di as err "fastscan unsupported YAML feature at line `linenum'. Rerun without fastscan."
+            di as err "fastread unsupported YAML feature at line `linenum'. Rerun without fastread."
             exit 198
         }
 
@@ -128,7 +128,7 @@ program define _yaml_fastscan
                 local current_field "`left'"
                 local value = "`right'"
                 if ("`blockscalars'" == "" & inlist("`value'", "|", "|-", ">", ">-")) {
-                    di as err "fastscan unsupported block scalar at line `linenum'. Rerun without fastscan or use blockscalars."
+                    di as err "fastread unsupported block scalar at line `linenum'. Rerun without fastread or use blockscalars."
                     exit 198
                 }
                 * Optional block scalar capture

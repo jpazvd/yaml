@@ -24,30 +24,30 @@ list in 1/10, clean noobs
 
 di as text ""
 di as text "{hline 70}"
-di as text "{bf:TEST 1b: Fast-scan read with fields/listkeys + cache}"
+di as text "{bf:TEST 1b: Fast-read read with fields/listkeys + cache}"
 di as text "{hline 70}"
 
-capture noisily yaml read using "data/fastscan_indicators.yaml", fastscan replace ///
+capture noisily yaml read using "data/fastread_indicators.yaml", fastread replace ///
     fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
 
-local fastscan_ok = (_rc == 0)
-if (`fastscan_ok') {
-    di as text "Fast-scan output (first 5 rows):"
+local fastread_ok = (_rc == 0)
+if (`fastread_ok') {
+    di as text "Fast-read output (first 5 rows):"
     list in 1/5, clean noobs
 
-    capture noisily yaml read using "data/fastscan_indicators.yaml", fastscan replace ///
+    capture noisily yaml read using "data/fastread_indicators.yaml", fastread replace ///
         fields(name description source_id topic_ids) ///
         listkeys(topic_ids topic_names) cache(ind_cache)
     if (_rc == 0) {
         di as text "Cache hit (expect 1): " r(cache_hit)
     }
     else {
-        di as error "Fast-scan cache test failed (r(`=_rc'))"
+        di as error "Fast-read cache test failed (r(`=_rc'))"
     }
 }
 else {
-    di as error "Fast-scan test skipped (r(`=_rc'))"
+    di as error "Fast-read test skipped (r(`=_rc'))"
 }
 
 di as text ""
