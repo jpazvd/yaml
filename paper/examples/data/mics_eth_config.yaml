@@ -1,0 +1,24 @@
+# MICS6 Ethiopia harmonization configuration
+# Used in Stata Journal article: Section 5.3
+
+survey: MICS6
+country: ETH
+year: 2024
+
+variables:
+  hhid:
+    from: HH1
+    to: hhid
+    label: Household ID
+
+  male:
+    from: HL4
+    to: male
+    label: Sex (1=Male, 0=Female)
+    values:
+      - from: 1
+        to: 1
+        label: Male
+      - from: 2
+        to: 0
+        label: Female

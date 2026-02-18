@@ -7,9 +7,16 @@
 #   bash build.sh paper        # build only paper (assumes figures exist)
 #   bash build.sh clean        # remove all generated artifacts
 #
+# Stata examples (manual step — run from repo root BEFORE building paper):
+#   stata-mp -b do paper/examples/paper_examples.do
+#   — or open Stata interactively and: do paper/examples/paper_examples.do
+#   This reproduces every stlog block in the paper.
+#   Data fixtures live in paper/examples/data/.
+#
 # Requirements:
 #   - lualatex (TeX Live 2024 or later)
 #   - bibtex
+#   - Stata 16+ (for examples only, not for LaTeX build)
 #
 # Author: João Pedro Azevedo
 # Date:   February 2026
@@ -129,6 +136,46 @@ build_paper() {
     log "Log summary: $warns warning(s), $errs error(s)"
 }
 
+check_examples() {
+    log "Checking Stata example reproducibility"
+
+    local dofile="$SCRIPT_DIR/examples/paper_examples.do"
+    local datadir="$SCRIPT_DIR/examples/data"
+    local missing=0
+
+    if [[ ! -f "$dofile" ]]; then
+        echo "  MISSING examples/paper_examples.do"
+        ((missing++))
+    else
+        echo "  OK      examples/paper_examples.do"
+    fi
+
+    for f in config.yaml unicef_indicators.yaml pipeline_config.yaml \
+             dev_config.yaml prod_config.yaml mics_eth_config.yaml \
+             user_config.yml; do
+        if [[ ! -f "$datadir/$f" ]]; then
+            echo "  MISSING examples/data/$f"
+            ((missing++))
+        else
+            echo "  OK      examples/data/$f"
+        fi
+    done
+
+    local logfile="$SCRIPT_DIR/examples/logs/paper_examples.log"
+    if [[ -f "$logfile" ]]; then
+        echo "  OK      examples/logs/paper_examples.log (last run exists)"
+    else
+        echo "  NOTE    examples/logs/paper_examples.log not found"
+        echo "          Run: stata-mp -b do paper/examples/paper_examples.do"
+    fi
+
+    if [[ $missing -gt 0 ]]; then
+        log "WARNING: $missing example file(s) missing"
+    else
+        log "All example files present"
+    fi
+}
+
 clean() {
     log "Cleaning generated artifacts"
 
@@ -141,6 +188,11 @@ clean() {
     cd "$PAPER_DIR"
     rm -f "$PAPER_MAIN".{aux,bbl,blg,log,out,pdf,pp1,tag,fdb_latexmk,fls,synctex.gz}
     echo "  Cleaned paper/"
+
+    # Clean example logs (keep .do and data)
+    rm -f "$SCRIPT_DIR"/examples/logs/*.log
+    rm -f "$SCRIPT_DIR"/examples/logs/*.yaml
+    echo "  Cleaned examples/logs/"
 
     log "Done"
 }
@@ -158,15 +210,19 @@ case "${1:-all}" in
     paper)
         build_paper
         ;;
+    examples)
+        check_examples
+        ;;
     clean)
         clean
         ;;
     all)
+        check_examples
         build_figures
         build_paper
         ;;
     *)
-        echo "Usage: bash build.sh [all|figures|paper|clean]"
+        echo "Usage: bash build.sh [all|figures|paper|examples|clean]"
         exit 1
         ;;
 esac
