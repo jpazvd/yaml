@@ -23,6 +23,8 @@
 *.ps
 *.pp1
 *.tag
+paper/*.pdf
+!paper/*-v[0-9]*.pdf
 
 # Keep the compiled PDF for review (optional - remove if you want to exclude)
 *.pdf
