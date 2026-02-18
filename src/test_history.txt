@@ -1,0 +1,17 @@
+=== wbopendata Test History ===
+Created:  7 Feb 2026
+
+
+======================================================================
+Test Run:  7 Feb 2026
+Started:  05:00:53
+Ended:    05:10:41
+Duration: 9m 48s
+Version:  18.0.0
+Build:    05Feb2026
+Stata:    17
+Tests:    61 run, 54 passed, 7 failed
+Result:   FAILED
+Failed:   DL-01, UPD-06, CACHE-02, CACHE-03, CACHE-04, CACHE-08, DISC-06
+Log:      test_results_v18.0.0_7Feb2026.log
+======================================================================
