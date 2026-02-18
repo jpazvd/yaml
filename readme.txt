@@ -39,7 +39,7 @@ FILES
     yaml_dir.ado                - List YAML data in memory
     yaml_frames.ado             - List YAML frames in memory
     yaml_clear.ado              - Clear YAML data from memory
-    _yaml_fastscan.ado          - Fast-scan parser helper
+    _yaml_fastread.ado          - Fast-read parser helper
     _yaml_tokenize_line.ado     - Streaming tokenization helper
     _yaml_pop_parents.ado       - Parent-stack helper
     yaml.sthlp                  - Help documentation
