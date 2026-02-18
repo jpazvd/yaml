@@ -8,32 +8,32 @@ program define yaml_read, rclass
     version 14.0
     
     syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
-        FASTSCAN FIELDS(string) LISTKEYS(string) CACHE(string) ///
+        FASTREAD FIELDS(string) LISTKEYS(string) CACHE(string) ///
         TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string)]
     
     * Validate option combinations
-    if ("`fastscan'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
-        di as err "fastscan is not compatible with locals/scalars"
+    if ("`fastread'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
+        di as err "fastread is not compatible with locals/scalars"
         exit 198
     }
-    if ("`listkeys'" != "" & "`fastscan'" == "") {
-        di as err "listkeys() requires fastscan"
+    if ("`listkeys'" != "" & "`fastread'" == "") {
+        di as err "listkeys() requires fastread"
         exit 198
     }
-    if ("`blockscalars'" != "" & "`fastscan'" == "") {
-        di as err "blockscalars requires fastscan"
+    if ("`blockscalars'" != "" & "`fastread'" == "") {
+        di as err "blockscalars requires fastread"
         exit 198
     }
-    if ("`targets'" != "" & "`fastscan'" != "") {
-        di as err "targets() is not supported with fastscan"
+    if ("`targets'" != "" & "`fastread'" != "") {
+        di as err "targets() is not supported with fastread"
         exit 198
     }
-    if ("`stream'" != "" & "`fastscan'" != "") {
-        di as err "stream is not supported with fastscan"
+    if ("`stream'" != "" & "`fastread'" != "") {
+        di as err "stream is not supported with fastread"
         exit 198
     }
-    if ("`index'" != "" & "`fastscan'" != "") {
-        di as err "index() is not supported with fastscan"
+    if ("`index'" != "" & "`fastread'" != "") {
+        di as err "index() is not supported with fastread"
         exit 198
     }
     if ("`earlyexit'" != "" & "`targets'" == "") {
@@ -142,7 +142,7 @@ program define yaml_read, rclass
     * Cache hit? (Stata 16+)
     local cache_hit = 0
     local skip_parse = 0
-    local yaml_mode = cond("`fastscan'" != "", "fastscan", "canonical")
+    local yaml_mode = cond("`fastread'" != "", "fastread", "canonical")
     if ("`cache_frame'" != "") {
         capture frame `cache_frame': count
         if (_rc == 0 & r(N) > 0) {
@@ -188,7 +188,7 @@ program define yaml_read, rclass
         frame create `frame'
         frame `frame' {
             quietly {
-                if ("`fastscan'" != "") {
+                if ("`fastread'" != "") {
                     gen str244 key = ""
                     gen str244 field = ""
                     gen str2000 value = ""
@@ -218,7 +218,7 @@ program define yaml_read, rclass
         }
         clear
         quietly {
-            if ("`fastscan'" != "") {
+            if ("`fastread'" != "") {
                 gen str244 key = ""
                 gen str244 field = ""
                 gen str2000 value = ""
@@ -238,18 +238,18 @@ program define yaml_read, rclass
         local use_frame = 0
     }
 
-    * Fast-scan path (opt-in)
-    if ("`fastscan'" != "" & `skip_parse' == 0) {
+    * Fast-read path (opt-in)
+    if ("`fastread'" != "" & `skip_parse' == 0) {
         if (`use_frame' == 1) {
             frame `frame' {
-                _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
+                _yaml_fastread using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
             }
         }
         else {
-            _yaml_fastscan using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
+            _yaml_fastread using "`using'", fields("`fields'") listkeys("`listkeys'") `blockscalars'
         }
 
-        * Cache fastscan results if requested
+        * Cache fastread results if requested
         if ("`cache_frame'" != "") {
             if (`use_frame' == 1) {
                 if ("`frame'" != "`cache_frame'") {
@@ -264,20 +264,20 @@ program define yaml_read, rclass
             frame `cache_frame' {
                 char _dta[yaml_source] "`using'"
                 char _dta[yaml_checksum] "`file_hash'"
-                char _dta[yaml_mode] "fastscan"
+                char _dta[yaml_mode] "fastread"
             }
         }
 
         return local yaml_source = "`using'"
-        return local yaml_mode = "fastscan"
+        return local yaml_mode = "fastread"
         return scalar cache_hit = 0
         exit 0
     }
 
-    * Fast-scan cache hit (skip parse)
-    if ("`fastscan'" != "" & `skip_parse' == 1) {
+    * Fast-read cache hit (skip parse)
+    if ("`fastread'" != "" & `skip_parse' == 1) {
         return local yaml_source = "`using'"
-        return local yaml_mode = "fastscan"
+        return local yaml_mode = "fastread"
         return scalar cache_hit = 1
         exit 0
     }
@@ -543,6 +543,7 @@ program define yaml_read, rclass
                     else if ("`vtype'" == "") {
                         local vtype "string"
                     }
+                    local last_key "`full_key'"
                 }
                 
                 * Store the key-value pair
@@ -568,7 +569,12 @@ program define yaml_read, rclass
                     qui replace parent = "`this_parent'" in `newobs'
                     qui replace type = "`vtype'" in `newobs'
                 }
-                
+
+                * Update parent_stack AFTER storing (for parent types)
+                if ("`vtype'" == "parent") {
+                    local parent_stack "`full_key'"
+                }
+
                 if ("`locals'" != "") {
                     * Store as return local (using truncated key)
                     if ("`value'" != "") {

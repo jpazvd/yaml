@@ -3,7 +3,7 @@
 *! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
 * v1.5.0: Added canonical early-exit targets, streaming tokenization, index frames,
-*         fastscan block scalar capture, unsupported-feature checks, and file checks
+*         fastread block scalar capture, unsupported-feature checks, and file checks
 * v1.3.1: Fixed return value propagation from frame context in yaml_get and yaml_list
 *         Fixed hyphen-to-underscore normalization in yaml_get search prefix
 *******************************************************************************
@@ -46,12 +46,14 @@ program define yaml
     version 14.0
 
     gettoken subcmd 0 : 0, parse(" ,")
-    if ("`subcmd'" == "") {
-        di as err "subcommand required. See {help yaml}"
-        exit 198
-    }
 
     local subcmd = lower("`subcmd'")
+
+    if ("`subcmd'" == "") {
+        di as err "subcommand required"
+        di as err "syntax: yaml {read|write|describe|list|get|validate|dir|frames|clear} ..."
+        exit 198
+    }
 
     if ("`subcmd'" == "read") {
         yaml_read `0'
@@ -59,7 +61,7 @@ program define yaml
     else if ("`subcmd'" == "write") {
         yaml_write `0'
     }
-    else if ("`subcmd'" == "describe") {
+    else if ("`subcmd'" == "describe" | "`subcmd'" == "desc") {
         yaml_describe `0'
     }
     else if ("`subcmd'" == "list") {
@@ -68,13 +70,13 @@ program define yaml
     else if ("`subcmd'" == "get") {
         yaml_get `0'
     }
-    else if ("`subcmd'" == "validate") {
+    else if ("`subcmd'" == "validate" | "`subcmd'" == "check") {
         yaml_validate `0'
     }
     else if ("`subcmd'" == "dir") {
         yaml_dir `0'
     }
-    else if ("`subcmd'" == "frames") {
+    else if ("`subcmd'" == "frames" | "`subcmd'" == "frame") {
         yaml_frames `0'
     }
     else if ("`subcmd'" == "clear") {
@@ -82,6 +84,7 @@ program define yaml
     }
     else {
         di as err "unknown subcommand: `subcmd'"
+        di as err "valid subcommands: read, write, describe, list, get, validate, dir, frames, clear"
         exit 198
     }
 end

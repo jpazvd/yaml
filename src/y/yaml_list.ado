@@ -36,8 +36,16 @@ program define yaml_list, rclass
         * Run list in frame context
         frame `frame' {
             _yaml_list_impl "`parent'", `keys_opt' `values_opt' separator("`separator'") `children_opt' `stata_opt' `noheader_opt'
+            * Capture return values before exiting frame block
+            local _return_names : r(macros)
+            foreach _rn of local _return_names {
+                local _rv_`_rn' `"`r(`_rn')'"'
+            }
         }
-        return add
+        * Restore return values outside frame block
+        foreach _rn of local _return_names {
+            return local `_rn' `"`_rv_`_rn''"'
+        }
     }
     else {
         * Use current dataset

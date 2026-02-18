@@ -67,9 +67,22 @@ program define yaml_get, rclass
     if (`use_frame' == 1) {
         frame `frame' {
             _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet' indexframe("`index_frame'")
+            * Capture return values before exiting frame block
+            local _found = r(found)
+            local _n_attrs = r(n_attrs)
+            local _return_names : r(macros)
+            foreach _rn of local _return_names {
+                local _rv_`_rn' `"`r(`_rn')'"'
+            }
         }
-        * Return values are set by _yaml_get_impl via return add
-        return add
+        * Restore return values outside frame block
+        return scalar found = `_found'
+        return scalar n_attrs = `_n_attrs'
+        foreach _rn of local _return_names {
+            if (!inlist("`_rn'", "found", "n_attrs")) {
+                return local `_rn' `"`_rv_`_rn''"'
+            }
+        }
     }
     else {
         _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet' indexframe("`index_frame'")
