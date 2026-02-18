@@ -9,14 +9,14 @@
 
 1. Split `yaml.ado` into modular subcommands for clarity and maintenance.
 2. Enforce a consistent `verbose` option and debugging hooks across all functions.
-3. Preserve compatibility and performance (fastscan, cache, index, streaming).
+3. Preserve compatibility and performance (fastread, cache, index, streaming).
 
 ---
 
 ## Proposed Module Layout
 
 - `yaml.ado` — dispatcher only
-- `yaml_read.ado` — read/parse, cache/index, fastscan
+- `yaml_read.ado` — read/parse, cache/index, fastread
 - `yaml_write.ado`
 - `yaml_list.ado`
 - `yaml_get.ado`
@@ -26,7 +26,7 @@
 - `yaml_frames.ado`
 - `yaml_clear.ado`
 - `yaml_utils.ado` — shared helpers (tokenization, key normalization, checksum/cache, logging)
-- `yaml_fastscan.ado` — fastscan engine and related checks
+- `yaml_fastread.ado` — fastread engine and related checks
 
 **Naming:** all subcommands are `yaml_<subcommand>`; internal helpers are `_yaml_<helper>`.
 
@@ -73,9 +73,9 @@ Move common helpers into `yaml_utils.ado`:
 - line trimming + indentation
 - error formatting
 
-### Stage 3: Fastscan Isolation
+### Stage 3: Fastread Isolation
 
-Move fastscan engine into `yaml_fastscan.ado` and:
+Move fastread engine into `yaml_fastread.ado` and:
 - isolate unsupported feature checks
 - isolate block scalar capture
 
@@ -112,7 +112,7 @@ Reduce `yaml.ado` to:
 
 - [ ] `yaml_<subcommand>.ado` files created
 - [ ] `yaml_utils.ado` helpers
-- [ ] `yaml_fastscan.ado` helper
+- [ ] `yaml_fastread.ado` helper
 - [ ] `yaml.ado` slim dispatcher
 - [ ] Updated `yaml.sthlp` to document `verbose`/`debug`
 - [ ] Updated examples to show debug usage
