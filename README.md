@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.5.0 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-read support.
+**Latest:** v1.5.1 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-read support.
 
 ### Key Features
 
@@ -245,7 +245,7 @@ Lists only YAML frames in memory. Requires Stata 16+.
 ### yaml clear
 
 ```stata
-yaml clear [, all frame(name)]
+yaml clear [framename] [, all]
 ```
 
 ## Data Model
@@ -258,7 +258,7 @@ YAML data is stored in a flat dataset with hierarchical references:
 |--------|------|-------------|
 | `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
 | `value` | str2000 | The value associated with the key |
-| `level` | int | Nesting depth (0 = root level) |
+| `level` | int | Nesting depth (1 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
 
@@ -481,7 +481,7 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.3.1)
+│   ├── yaml.ado           # Main command (v1.5.1)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
 ├── examples/              # Examples and test files

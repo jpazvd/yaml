@@ -18,7 +18,7 @@ The `yaml` command provides a complete YAML 1.2 (subset) parser for Stata, enabl
 │   yaml_clear.ado                                                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Helpers (used by yaml_read):                                                │
-│   _yaml_fastread.ado    _yaml_tokenize_line.ado   _yaml_pop_parents.ado      │
+│   _yaml_fastread.ado    _yaml_tokenize_line.ado                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                         Internal Storage                                     │
 │  ┌────────────────────────────────────────────────────────────────────┐     │
@@ -43,6 +43,7 @@ The `yaml` command provides a complete YAML 1.2 (subset) parser for Stata, enabl
 | `yaml list` | List keys, values, or children of a key |
 | `yaml get` | Retrieve attributes of a specific key |
 | `yaml validate` | Validate required keys and types |
+| `yaml dir` | List all YAML data in memory (dataset and frames) |
 | `yaml frames` | List all YAML frames in memory |
 | `yaml clear` | Clear YAML data from memory |
 
@@ -200,7 +201,7 @@ yaml frames [, detail]
 ### yaml clear
 
 ```stata
-yaml clear [, all frame(name)]
+yaml clear [framename] [, all]
 ```
 
 ## Supported YAML Features
@@ -498,12 +499,17 @@ The `unicefdata` command (v1.4.0) uses this exact pattern:
 ## File Location
 
 ```
-unicefData/
-└── stata/
-    └── src/
-        └── y/
-            ├── yaml.ado      # Main command file
-            └── README.md     # This documentation
+yaml-dev/
+└── src/
+    ├── y/
+    │   ├── yaml.ado           # Main dispatcher
+    │   ├── yaml_read.ado      # Read subcommand
+    │   ├── yaml_write.ado     # Write subcommand
+    │   ├── yaml.sthlp         # Help file
+    │   └── README.md          # This documentation
+    └── _/
+        ├── _yaml_fastread.ado       # Fast-read parser
+        └── _yaml_tokenize_line.ado  # Streaming tokenizer
 ```
 
 ## Design Principles
