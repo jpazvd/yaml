@@ -64,7 +64,7 @@ program define _yaml_fastread
         }
 
         * Unsupported YAML features in fastread: anchors, aliases, merge keys
-        if (regexm(`"`trimmed'"', "^&") | regexm(`"`trimmed'"', "^\\*") | ///
+        if (regexm(`"`trimmed'"', "^&") | regexm(`"`trimmed'"', "^[*]") | ///
             regexm(`"`trimmed'"', "^<<:")) {
             di as err "fastread unsupported YAML feature at line `linenum'. Rerun without fastread."
             exit 198
