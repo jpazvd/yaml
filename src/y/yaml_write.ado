@@ -122,10 +122,10 @@ program define _yaml_write_impl
             file write `fh' "`spaces'`leaf':" _n
         }
         else if ("`t'" == "list_item") {
-            file write `fh' "`spaces'- `v'" _n
+            file write `fh' `"`spaces'- `v'"' _n
         }
         else {
-            file write `fh' "`spaces'`leaf': `v'" _n
+            file write `fh' `"`spaces'`leaf': `v'"' _n
         }
     }
 end
