@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml
-*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
 * v1.5.0: Added canonical early-exit targets, streaming tokenization, index frames,
 *         fastread block scalar capture, unsupported-feature checks, and file checks
