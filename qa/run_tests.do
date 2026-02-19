@@ -36,6 +36,11 @@ foreach arg of local args {
 		di as text "  REG-01   nested lists and parent hierarchy (BUG-1/BUG-2)"
 		di as text "  REG-02   frame return value propagation (BUG-3)"
 		di as text "  REG-03   subcommand abbreviations (desc, frame, check)"
+		di as text "  REG-04   round-trip read/write produces valid YAML (BUG-4)"
+		di as text "  REG-05   yaml validate type check matches correct row (BUG-5)"
+		di as text "  REG-06   fastread handles brackets/braces in values (BUG-6)"
+		di as text "  REG-07   early-exit does not double-close file handle (BUG-7)"
+		di as text "  REG-08   yaml list header with parent filter (BUG-8)"
 		exit
 	}
 	else {
@@ -267,6 +272,66 @@ if "`target_test'" == "" | "`target_test'" == "REG-03" {
 	}
 	else {
 		test_fail, id("REG-03") msg("test_abbreviations.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-04: round-trip read/write produces valid YAML (BUG-4)
+if "`target_test'" == "" | "`target_test'" == "REG-04" {
+	test_start, id("REG-04") desc("round-trip read/write produces valid YAML (BUG-4)")
+	capture quietly do "`qadir'/scripts/test_roundtrip.do"
+	if _rc == 0 {
+		test_pass, id("REG-04")
+	}
+	else {
+		test_fail, id("REG-04") msg("test_roundtrip.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-05: yaml validate type check matches correct row (BUG-5)
+if "`target_test'" == "" | "`target_test'" == "REG-05" {
+	test_start, id("REG-05") desc("yaml validate type check matches correct row (BUG-5)")
+	capture quietly do "`qadir'/scripts/test_validate_types.do"
+	if _rc == 0 {
+		test_pass, id("REG-05")
+	}
+	else {
+		test_fail, id("REG-05") msg("test_validate_types.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-06: fastread handles brackets/braces in values (BUG-6)
+if "`target_test'" == "" | "`target_test'" == "REG-06" {
+	test_start, id("REG-06") desc("fastread handles brackets/braces in values (BUG-6)")
+	capture quietly do "`qadir'/scripts/test_brackets_in_values.do"
+	if _rc == 0 {
+		test_pass, id("REG-06")
+	}
+	else {
+		test_fail, id("REG-06") msg("test_brackets_in_values.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-07: early-exit does not double-close file handle (BUG-7)
+if "`target_test'" == "" | "`target_test'" == "REG-07" {
+	test_start, id("REG-07") desc("early-exit does not double-close file handle (BUG-7)")
+	capture quietly do "`qadir'/scripts/test_early_exit.do"
+	if _rc == 0 {
+		test_pass, id("REG-07")
+	}
+	else {
+		test_fail, id("REG-07") msg("test_early_exit.do failed (rc=`=_rc')")
+	}
+}
+
+* REG-08: yaml list header displays correctly with parent filter (BUG-8)
+if "`target_test'" == "" | "`target_test'" == "REG-08" {
+	test_start, id("REG-08") desc("yaml list header with parent filter (BUG-8)")
+	capture quietly do "`qadir'/scripts/test_list_header.do"
+	if _rc == 0 {
+		test_pass, id("REG-08")
+	}
+	else {
+		test_fail, id("REG-08") msg("test_list_header.do failed (rc=`=_rc')")
 	}
 }
 
