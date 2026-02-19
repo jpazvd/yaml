@@ -74,11 +74,11 @@ if _rc {
 }
 
 * Example 3: Fast-read for large metadata (opt-in)
-display as text "--- Fast-read indicators.yaml (fields + listkeys + cache) ---"
-yaml read using "`datadir'/indicators.yaml", fastread ///
+display as text "--- Fast-read fastread_indicators.yaml (fields + listkeys + cache) ---"
+yaml read using "`datadir'/fastread_indicators.yaml", replace fastread ///
     fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
-list in 1/5, clean noobs
+list, clean noobs
 display _n
 
 * ==============================================================================
