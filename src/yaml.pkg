@@ -32,4 +32,3 @@ f y/yaml_whatsnew.sthlp
 f y/yaml_examples.sthlp
 f _/_yaml_fastread.ado
 f _/_yaml_tokenize_line.ado
-f _/_yaml_pop_parents.ado
