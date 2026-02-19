@@ -8,6 +8,6 @@ gamma: true
 delta:
   child1: nested_string
   child2: 99
-epsilon:
+epsilon: null
 zeta: false
 eta: 3.14
