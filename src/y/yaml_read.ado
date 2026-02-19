@@ -1,7 +1,9 @@
 *******************************************************************************
 * yaml_read
-*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.6.0   19Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
+* v1.6.0: Mata st_sstore for embedded quote safety, strL option,
+*         block scalar support in canonical parser, continuation lines
 *******************************************************************************
 
 program define yaml_read, rclass
@@ -9,7 +11,7 @@ program define yaml_read, rclass
     
     syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
         FASTREAD FIELDS(string) LISTKEYS(string) CACHE(string) ///
-        TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string)]
+        TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string) STRL]
     
     * Validate option combinations
     if ("`fastread'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
@@ -18,10 +20,6 @@ program define yaml_read, rclass
     }
     if ("`listkeys'" != "" & "`fastread'" == "") {
         di as err "listkeys() requires fastread"
-        exit 198
-    }
-    if ("`blockscalars'" != "" & "`fastread'" == "") {
-        di as err "blockscalars requires fastread"
         exit 198
     }
     if ("`targets'" != "" & "`fastread'" != "") {
@@ -181,6 +179,9 @@ program define yaml_read, rclass
         }
     }
     
+    * Determine value storage type
+    local val_type = cond("`strl'" != "", "strL", "str2000")
+
     * Prepare storage location
     if ("`frame'" != "") {
         * Load into frame (explicit request)
@@ -191,13 +192,13 @@ program define yaml_read, rclass
                 if ("`fastread'" != "") {
                     gen str244 key = ""
                     gen str244 field = ""
-                    gen str2000 value = ""
+                    gen `val_type' value = ""
                     gen byte list = .
                     gen long line = .
                 }
                 else {
                     gen str244 key = ""
-                    gen str2000 value = ""
+                    gen `val_type' value = ""
                     gen int level = .
                     gen str244 parent = ""
                     gen str32 type = ""
@@ -310,9 +311,15 @@ program define yaml_read, rclass
         local indent_1 = 0
         local parent_1 ""
         local list_index = 0
+        local has_pending = 0
+        local pending_line ""
         file read `fh' line
-        
-        while r(eof) == 0 {
+
+        while r(eof) == 0 | `has_pending' == 1 {
+        if (`has_pending' == 1) {
+            local line `"`pending_line'"'
+            local has_pending = 0
+        }
         local linenum = `linenum' + 1
         
         * Skip empty lines and comments
@@ -418,7 +425,7 @@ program define yaml_read, rclass
                     local newobs = _N + 1
                     qui set obs `newobs'
                     qui replace key = "`full_key'" in `newobs'
-                    qui replace value = `"`value'"' in `newobs'
+                    mata: st_sstore(`newobs', "value", st_local("value"))
                     qui replace level = `level' in `newobs'
                     qui replace parent = "`this_parent'" in `newobs'
                     qui replace type = "`vtype'" in `newobs'
@@ -428,7 +435,7 @@ program define yaml_read, rclass
                 local newobs = _N + 1
                 qui set obs `newobs'
                 qui replace key = "`full_key'" in `newobs'
-                qui replace value = `"`value'"' in `newobs'
+                mata: st_sstore(`newobs', "value", st_local("value"))
                 qui replace level = `level' in `newobs'
                 qui replace parent = "`this_parent'" in `newobs'
                 qui replace type = "`vtype'" in `newobs'
@@ -483,7 +490,68 @@ program define yaml_read, rclass
                     local value = substr(`"`value'"', 2, length(`"`value'"') - 2)
                     local was_quoted = 1
                 }
-                
+
+                * Block scalar handling (|, >, |-, >-)
+                if ("`blockscalars'" != "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                    local block_style `"`value'"'
+                    local block_indent = `indent'
+                    local block_val ""
+                    file read `fh' line
+                    while (r(eof) == 0) {
+                        local next_trim = strtrim(`"`line'"')
+                        local next_indent = 0
+                        local tmp `"`line'"'
+                        while (substr(`"`tmp'"', 1, 1) == " ") {
+                            local next_indent = `next_indent' + 1
+                            local tmp = substr(`"`tmp'"', 2, .)
+                        }
+                        if (`"`next_trim'"' != "" & `next_indent' <= `block_indent') {
+                            local pending_line `"`line'"'
+                            local has_pending = 1
+                            continue, break
+                        }
+                        if (`"`next_trim'"' != "") {
+                            if (`"`block_val'"' == "") {
+                                local block_val `"`next_trim'"'
+                            }
+                            else if ("`block_style'" == "|" | "`block_style'" == "|-") {
+                                local block_val `"`block_val'"' + char(10) + `"`next_trim'"'
+                            }
+                            else {
+                                local block_val `"`block_val'"' + " " + `"`next_trim'"'
+                            }
+                        }
+                        file read `fh' line
+                    }
+                    local value `"`block_val'"'
+                }
+
+                * Continuation lines: plain scalar spanning multiple lines
+                if (`"`value'"' != "" & `has_pending' == 0 & ///
+                    !inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                    file read `fh' line
+                    while (r(eof) == 0) {
+                        local next_trim = strtrim(`"`line'"')
+                        local next_indent = 0
+                        local tmp `"`line'"'
+                        while (substr(`"`tmp'"', 1, 1) == " ") {
+                            local next_indent = `next_indent' + 1
+                            local tmp = substr(`"`tmp'"', 2, .)
+                        }
+                        * Continuation if: deeper indent, not empty/comment, not list, not key:value
+                        if (`next_indent' <= `indent' | `"`next_trim'"' == "" | ///
+                            substr(`"`next_trim'"', 1, 1) == "#" | ///
+                            substr(`"`next_trim'"', 1, 2) == "- " | ///
+                            (strpos(`"`next_trim'"', ":") > 0 & strpos(`"`next_trim'"', ": ") > 0)) {
+                            local pending_line `"`line'"'
+                            local has_pending = 1
+                            continue, break
+                        }
+                        local value `"`value'"' + " " + `"`next_trim'"'
+                        file read `fh' line
+                    }
+                }
+
                 * Build full key name with parent hierarchy
                 local full_key "`key'"
                 if ("`parent_stack'" != "") {
@@ -553,7 +621,7 @@ program define yaml_read, rclass
                         local newobs = _N + 1
                         qui set obs `newobs'
                         qui replace key = "`full_key'" in `newobs'
-                        qui replace value = `"`value'"' in `newobs'
+                        mata: st_sstore(`newobs', "value", st_local("value"))
                         qui replace level = `level' in `newobs'
                         qui replace parent = "`this_parent'" in `newobs'
                         qui replace type = "`vtype'" in `newobs'
@@ -563,7 +631,7 @@ program define yaml_read, rclass
                     local newobs = _N + 1
                     qui set obs `newobs'
                     qui replace key = "`full_key'" in `newobs'
-                    qui replace value = `"`value'"' in `newobs'
+                    mata: st_sstore(`newobs', "value", st_local("value"))
                     qui replace level = `level' in `newobs'
                     qui replace parent = "`this_parent'" in `newobs'
                     qui replace type = "`vtype'" in `newobs'
@@ -610,7 +678,7 @@ program define yaml_read, rclass
             }
         }
 
-        file read `fh' line
+        if (`has_pending' == 0) file read `fh' line
     }
 
         file close `fh'
