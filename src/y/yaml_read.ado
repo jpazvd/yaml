@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_read
-*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
 *******************************************************************************
 
@@ -268,16 +268,16 @@ program define yaml_read, rclass
             }
         }
 
-        return local yaml_source = "`using'"
-        return local yaml_mode = "fastread"
+        return local filename "`using'"
+        return local yaml_mode "fastread"
         return scalar cache_hit = 0
         exit 0
     }
 
     * Fast-read cache hit (skip parse)
     if ("`fastread'" != "" & `skip_parse' == 1) {
-        return local yaml_source = "`using'"
-        return local yaml_mode = "fastread"
+        return local filename "`using'"
+        return local yaml_mode "fastread"
         return scalar cache_hit = 1
         exit 0
     }
@@ -459,7 +459,6 @@ program define yaml_read, rclass
                     }
                 }
                 if (`found_count' == `n_targets') {
-                    file close `fh'
                     continue, break
                 }
             }
@@ -605,16 +604,15 @@ program define yaml_read, rclass
                         }
                     }
                     if (`found_count' == `n_targets') {
-                        file close `fh'
                         continue, break
                     }
                 }
             }
         }
-        
+
         file read `fh' line
     }
-    
+
         file close `fh'
     }
 
