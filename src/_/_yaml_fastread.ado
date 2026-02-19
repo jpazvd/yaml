@@ -109,7 +109,7 @@ program define _yaml_fastread
                 qui set obs `newobs'
                 qui replace key = "`current_key'" in `newobs'
                 qui replace field = "`current_field'" in `newobs'
-                qui replace value = `"`item_value'"' in `newobs'
+                mata: st_sstore(`newobs', "value", st_local("item_value"))
                 qui replace list = 1 in `newobs'
                 qui replace line = `linenum' in `newobs'
             }
@@ -204,7 +204,7 @@ program define _yaml_fastread
                     qui set obs `newobs'
                     qui replace key = "`current_key'" in `newobs'
                     qui replace field = "`current_field'" in `newobs'
-                    qui replace value = `"`value'"' in `newobs'
+                    mata: st_sstore(`newobs', "value", st_local("value"))
                     qui replace list = 0 in `newobs'
                     qui replace line = `linenum' in `newobs'
                 }
