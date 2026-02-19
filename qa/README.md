@@ -2,6 +2,62 @@
 
 This folder contains QA protocols and scripts for validating the `yaml` Stata module.
 
+## Quick Reference
+
+| Metric | Value |
+|--------|-------|
+| **Test Families** | ENV, EX, REG |
+| **Runner** | `qa/run_tests.do` |
+| **Log file** | `qa/logs/run_tests.log` (gitignored) |
+| **History** | `qa/test_history.txt` |
+
+## Running Tests
+
+### Full suite
+```stata
+cd C:\GitHub\myados\yaml-dev\qa
+do run_tests.do
+```
+
+### Single test
+```stata
+do run_tests.do EX-01
+```
+
+### List available tests
+```stata
+do run_tests.do list
+```
+
+### Verbose mode
+```stata
+do run_tests.do verbose
+```
+
+## Test Families
+
+### 1. Environment (ENV)
+Ensures the module is installed and discoverable.
+
+- **ENV-01**: `yaml` command is available
+- **ENV-02**: help file exists
+- **ENV-03**: version header format
+
+### 2. Example smoke tests (EX)
+Runs example scripts to validate core workflows.
+
+- **EX-01**: `examples/test_yaml.do`
+- **EX-02**: `examples/test_yaml_improvements.do`
+- **EX-03**: `examples/yaml_basic_examples.do`
+
+### 3. Regression tests (REG)
+
+Targeted regression tests for specific bug fixes.
+
+- **REG-01**: Nested lists and parent hierarchy (BUG-1/BUG-2)
+- **REG-02**: Frame return value propagation (BUG-3, Stata 16+)
+- **REG-03**: Subcommand abbreviations (`desc`, `frame`, `check`)
+
 ## Categories (aligned with unicefData + wbopendata)
 
 - **docs/**: QA documentation, checklists, and protocols
@@ -15,4 +71,4 @@ This folder contains QA protocols and scripts for validating the `yaml` Stata mo
 - `run_tests.do`: Primary QA runner
 - `test_protocol.md`: Step-by-step QA protocol
 - `TESTING_GUIDE.md`: How to run QA locally
-- `test_history.txt`: Log of QA runs (manual)
+- `test_history.txt`: Log of QA runs

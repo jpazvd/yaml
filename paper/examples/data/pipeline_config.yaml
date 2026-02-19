@@ -1,0 +1,35 @@
+# Pipeline configuration
+# Used in Stata Journal article examples for configuration validation
+
+name: SDG Data Pipeline
+version: 2.1.0
+environment: development
+
+# Required database settings
+database:
+  host: db.staging.example.com
+  port: 5432
+  name: sdg_indicators
+  
+# API settings with timeout
+api_endpoint: https://api.sdg.example.com/v2
+api_timeout: 60
+
+# Processing flags
+debug: true
+verbose: false
+dry_run: false
+
+# Output settings
+output:
+  format: xlsx
+  directory: ./output/
+  compress: true
+  
+# Countries to process
+countries:
+  - BRA
+  - ARG
+  - CHL
+  - COL
+  - PER

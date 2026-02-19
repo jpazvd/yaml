@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.5.0 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-scan support.
+**Latest:** v1.5.1 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-read support.
 
 ### Key Features
 
@@ -21,7 +21,7 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Multiple frame support** (Stata 16+) for managing multiple configurations
 - **Fast-scan mode** for large metadata catalogs (opt-in)
 - **Field-selective extraction** with `fields()`
-- **List block extraction** with `listkeys()` (fast-scan)
+- **List block extraction** with `listkeys()` (fast-read)
 - **Frame caching** with `cache()` (Stata 16+)
 
 ## Installation
@@ -60,8 +60,8 @@ yaml validate, required(name version database)
 * Write modified configuration
 yaml write using output.yaml, replace
 
-* Speed-first metadata read (fastscan)
-yaml read using indicators.yaml, fastscan fields(name description source_id topic_ids) ///
+* Speed-first metadata read (fastread)
+yaml read using indicators.yaml, fastread fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
 ```
 
@@ -127,10 +127,10 @@ yaml read using filename.yaml [, options]
 - `scalars` - Store numeric values as scalars
 - `prefix(string)` - Prefix for local/scalar names (default: `yaml_`)
 - `verbose` - Display parsing details
-- `fastscan` - Speed-first parsing for large, regular YAML
+- `fastread` - Speed-first parsing for large, regular YAML
 - `fields(string)` - Restrict extraction to specific keys
-- `listkeys(string)` - Extract list blocks for specified keys (fastscan only)
-- `blockscalars` - Capture block scalars in fast-scan mode
+- `listkeys(string)` - Extract list blocks for specified keys (fastread only)
+- `blockscalars` - Capture block scalars in fast-read mode
 - `targets(string)` - Early-exit targets for canonical parse (exact keys)
 - `earlyexit` - Stop parsing once all targets are found (canonical)
 - `stream` - Use streaming tokenization for canonical parse
@@ -245,7 +245,7 @@ Lists only YAML frames in memory. Requires Stata 16+.
 ### yaml clear
 
 ```stata
-yaml clear [, all frame(name)]
+yaml clear [framename] [, all]
 ```
 
 ## Data Model
@@ -258,13 +258,13 @@ YAML data is stored in a flat dataset with hierarchical references:
 |--------|------|-------------|
 | `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
 | `value` | str2000 | The value associated with the key |
-| `level` | int | Nesting depth (0 = root level) |
+| `level` | int | Nesting depth (1 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
 
-### Fast-Scan Output Schema
+### Fast-Read Output Schema
 
-In `fastscan` mode, the output is row-wise and minimal:
+In `fastread` mode, the output is row-wise and minimal:
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -481,7 +481,7 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.3.1)
+│   ├── yaml.ado           # Main command (v1.5.1)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
 ├── examples/              # Examples and test files

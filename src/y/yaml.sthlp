@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.5.0  04Feb2026}{...}
+{* *! version 1.5.1  18Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -65,7 +65,7 @@ Stata 16 or later.
 {cmd:yaml read}
 {cmd:using} {it:filename}
 [{cmd:,} {opt frame(name)} {opt l:ocals} {opt s:calars} {opt p:refix(string)} {opt replace} {opt v:erbose}
-{opt fastscan} {opt fields(string)} {opt listkeys(string)} {opt cache(string)}]
+{opt fastread} {opt fields(string)} {opt listkeys(string)} {opt cache(string)}]
 
 {pstd}
 Reads a YAML file and parses its contents into the current dataset (default) or a frame.
@@ -79,10 +79,10 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt p:refix(string)}}prefix for macro/scalar names; default is "yaml_"{p_end}
 {synopt:{opt replace}}replace existing data in memory{p_end}
 {synopt:{opt v:erbose}}display parsing progress{p_end}
-{synopt:{opt fastscan}}use fast-scan parser (speed-first, limited YAML subset){p_end}
+{synopt:{opt fastread}}use fast-read parser (speed-first, limited YAML subset){p_end}
 {synopt:{opt fields(string)}}restrict extraction to specific field keys{p_end}
-{synopt:{opt listkeys(string)}}extract list blocks for specified fields (fastscan only){p_end}
-{synopt:{opt blockscalars}}capture block scalars in fast-scan mode (opt-in){p_end}
+{synopt:{opt listkeys(string)}}extract list blocks for specified fields (fastread only){p_end}
+{synopt:{opt blockscalars}}capture block scalars in fast-read mode (opt-in){p_end}
 {synopt:{opt targets(string)}}early-exit targets for canonical parse (exact keys){p_end}
 {synopt:{opt earlyexit}}stop parsing once all targets are found (canonical){p_end}
 {synopt:{opt stream}}use streaming tokenization for canonical parse{p_end}
@@ -91,11 +91,11 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synoptline}
 
 {pstd}
-{opt fastscan} is not compatible with {opt locals} or {opt scalars}.
+{opt fastread} is not compatible with {opt locals} or {opt scalars}.
 
 {pstd}
 {opt targets()} and {opt earlyexit} apply to canonical parsing only and are not supported
-with {opt fastscan}.
+with {opt fastread}.
 
 {pstd}
 {opt cache()} accepts a frame name (e.g., {cmd:cache(mycache)}) or a named form
@@ -111,7 +111,7 @@ The following variables are created in canonical mode:
 {phang2}{cmd:type} - Value type (string, numeric, boolean, null, parent){p_end}
 
 {pstd}
-In {opt fastscan} mode, the following variables are created:{p_end}
+In {opt fastread} mode, the following variables are created:{p_end}
 {phang2}{cmd:key} - Top-level key (e.g., indicator code){p_end}
 {phang2}{cmd:field} - Field name under the key{p_end}
 {phang2}{cmd:value} - Field value{p_end}
@@ -332,7 +332,7 @@ Clears YAML data from memory.
 {pstd}
 {bf:Example 2b: Fast-scan for large metadata (opt-in)}{p_end}
 
-{phang2}{cmd:. yaml read using "indicators.yaml", fastscan fields(name description source_id topic_ids) }{p_end}
+{phang2}{cmd:. yaml read using "indicators.yaml", fastread fields(name description source_id topic_ids) }{p_end}
 {phang2}{cmd:.     listkeys(topic_ids topic_names) cache(ind_cache)}{p_end}
 {phang2}{cmd:. list in 1/5}{p_end}
 
@@ -434,7 +434,7 @@ Clears YAML data from memory.
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:r(filename)}}name of file read{p_end}
 {synopt:{cmd:r(frame)}}name of frame created (if frame option used){p_end}
-{synopt:{cmd:r(yaml_mode)}}parsing mode: {cmd:canonical} or {cmd:fastscan}{p_end}
+{synopt:{cmd:r(yaml_mode)}}parsing mode: {cmd:canonical} or {cmd:fastread}{p_end}
 {synopt:{cmd:r(cache_hit)}}1 if cache was used, 0 otherwise{p_end}
 {synopt:{cmd:r(yaml_*)}}values from YAML file (when {opt locals} specified){p_end}
 
@@ -466,10 +466,10 @@ The {opt frame()} option requires Stata 16.0 or later.
 {phang2}- Document markers (---){p_end}
 
 {pstd}
-{cmd:fastscan} mode is optimized for shallow mappings and list blocks, and does not
+{cmd:fastread} mode is optimized for shallow mappings and list blocks, and does not
 support anchors, aliases, or complex nested structures. Use the canonical parser
 for full YAML compliance.
-Block scalars can be captured in fast-scan mode by adding {opt blockscalars}.
+Block scalars can be captured in fast-read mode by adding {opt blockscalars}.
 
 
 {marker author}{...}
@@ -485,5 +485,5 @@ jpazevedo@unicef.org
 {title:Also see}
 
 {psee}
-{space 2}Help: {help frames}, {help infile}, {help import delimited}, {help file}
+{space 2}Help: {help yaml_examples:yaml examples}, {help yaml_whatsnew:what's new}, {help frames}, {help infile}, {help import delimited}, {help file}
 {p_end}

@@ -1,7 +1,7 @@
 *! readme.txt for yaml package
 *! Author: João Pedro Azevedo
-*! Version: 1.3.0
-*! Date: December 2025
+*! Version: 1.5.0
+*! Date: February 2026
 
 TITLE
     yaml: Stata module for YAML file processing
@@ -29,7 +29,19 @@ SUBCOMMANDS
     yaml clear     - Clear YAML data from memory
 
 FILES
-    yaml.ado                    - Main command file
+    yaml.ado                    - Main command dispatcher
+    yaml_read.ado               - Read YAML file into dataset or frame
+    yaml_write.ado              - Write dataset or frame to YAML
+    yaml_describe.ado           - Display YAML structure
+    yaml_list.ado               - List keys and values
+    yaml_get.ado                - Retrieve key attributes
+    yaml_validate.ado           - Validate required keys and types
+    yaml_dir.ado                - List YAML data in memory
+    yaml_frames.ado             - List YAML frames in memory
+    yaml_clear.ado              - Clear YAML data from memory
+    _yaml_fastread.ado          - Fast-read parser helper
+    _yaml_tokenize_line.ado     - Streaming tokenization helper
+    _yaml_pop_parents.ado       - Parent-stack helper
     yaml.sthlp                  - Help documentation
     
     Example files (in examples/):

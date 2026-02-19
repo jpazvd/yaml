@@ -1,0 +1,24 @@
+# Sample project configuration file
+# Used in Stata Journal article examples
+
+name: My Project
+version: 1.0
+description: Sample configuration for yaml command demonstration
+
+# Database settings
+database:
+  host: localhost
+  port: 5432
+  name: analytics_db
+  user: analyst
+
+# API configuration
+api_endpoint: https://api.example.com/v1
+api_timeout: 30
+
+# Debug settings
+debug: true
+
+# Processing parameters
+max_records: 10000
+output_format: csv

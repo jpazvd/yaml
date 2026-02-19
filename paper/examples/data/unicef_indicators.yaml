@@ -1,0 +1,136 @@
+# UNICEF SDMX API Indicator Metadata
+# Source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_INDICATOR
+# This file contains indicator definitions from the UNICEF SDMX API
+
+metadata_version: '1.0'
+synced_at: '2025-12-03T04:57:02.801772Z'
+source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_INDICATOR
+agency: UNICEF
+total_indicators: 15
+
+indicators:
+  # Child Mortality Indicators (CME dataflow)
+  CME_MRY0T4:
+    code: CME_MRY0T4
+    name: Under-five mortality rate
+    description: Probability of dying between birth and exact age 5
+    dataflow: CME
+    sdg_target: '3.2.1'
+    unit: Deaths per 1,000 live births
+    source: UN Inter-agency Group for Child Mortality Estimation
+    frequency: Annual
+
+  CME_MRM0:
+    code: CME_MRM0
+    name: Neonatal mortality rate
+    description: Probability of dying during the first 28 days of life
+    dataflow: CME
+    sdg_target: '3.2.2'
+    unit: Deaths per 1,000 live births
+    source: UN Inter-agency Group for Child Mortality Estimation
+    frequency: Annual
+
+  CME_MRY0:
+    code: CME_MRY0
+    name: Infant mortality rate
+    description: Probability of dying between birth and exact age 1
+    dataflow: CME
+    sdg_target: '3.2.1'
+    unit: Deaths per 1,000 live births
+    source: UN Inter-agency Group for Child Mortality Estimation
+    frequency: Annual
+
+  # Nutrition Indicators (NUTRITION dataflow)
+  NT_ANT_HAZ_NE2_MOD:
+    code: NT_ANT_HAZ_NE2_MOD
+    name: Stunting prevalence (moderate and severe)
+    description: Children under 5 with height-for-age < -2 SD from median
+    dataflow: NUTRITION
+    sdg_target: '2.2.1'
+    unit: Percentage
+    source: UNICEF-WHO-World Bank Joint Malnutrition Estimates
+    frequency: Annual
+
+  NT_ANT_WHZ_NE2:
+    code: NT_ANT_WHZ_NE2
+    name: Wasting prevalence
+    description: Children under 5 with weight-for-height < -2 SD from median
+    dataflow: NUTRITION
+    sdg_target: '2.2.2'
+    unit: Percentage
+    source: UNICEF-WHO-World Bank Joint Malnutrition Estimates
+    frequency: Annual
+
+  NT_ANT_WHZ_PO2_MOD:
+    code: NT_ANT_WHZ_PO2_MOD
+    name: Overweight prevalence (moderate and severe)
+    description: Children under 5 with weight-for-height > +2 SD from median
+    dataflow: NUTRITION
+    sdg_target: '2.2.2'
+    unit: Percentage
+    source: UNICEF-WHO-World Bank Joint Malnutrition Estimates
+    frequency: Annual
+
+  # Immunization Indicators (IMMUNISATION dataflow)
+  IM_DTP3:
+    code: IM_DTP3
+    name: DTP3 immunization coverage
+    description: Percentage of surviving infants who received 3 doses of DTP vaccine
+    dataflow: IMMUNISATION
+    sdg_target: '3.b.1'
+    unit: Percentage
+    source: WHO/UNICEF Estimates of National Immunization Coverage
+    frequency: Annual
+
+  IM_MCV1:
+    code: IM_MCV1
+    name: MCV1 immunization coverage
+    description: Percentage of children who received first dose of measles vaccine
+    dataflow: IMMUNISATION
+    sdg_target: '3.b.1'
+    unit: Percentage
+    source: WHO/UNICEF Estimates of National Immunization Coverage
+    frequency: Annual
+
+  # Education Indicators (EDUCATION_UIS_SDG dataflow)
+  ED_CR_L1_UIS_MOD:
+    code: ED_CR_L1_UIS_MOD
+    name: Completion rate, primary education
+    description: Percentage of cohort completing primary education
+    dataflow: EDUCATION_UIS_SDG
+    sdg_target: '4.1.2'
+    unit: Percentage
+    source: UNESCO Institute for Statistics
+    frequency: Annual
+
+  ED_READ_L2:
+    code: ED_READ_L2
+    name: Reading proficiency, end of lower secondary
+    description: Percentage achieving minimum proficiency in reading
+    dataflow: EDUCATION_UIS_SDG
+    sdg_target: '4.1.1'
+    unit: Percentage
+    source: UNESCO Institute for Statistics
+    frequency: Annual
+
+  # WASH Indicators (WASH dataflow)
+  WS_PPL_W-SM:
+    code: WS_PPL_W-SM
+    name: Safely managed drinking water services
+    description: Population using safely managed drinking water services
+    dataflow: WASH
+    sdg_target: '6.1.1'
+    unit: Percentage of population
+    source: WHO/UNICEF Joint Monitoring Programme
+    frequency: Annual
+
+  WS_PPL_S-SM:
+    code: WS_PPL_S-SM
+    name: Safely managed sanitation services
+    description: Population using safely managed sanitation services
+    dataflow: WASH
+    sdg_target: '6.2.1'
+    unit: Percentage of population
+    source: WHO/UNICEF Joint Monitoring Programme
+    frequency: Annual
+

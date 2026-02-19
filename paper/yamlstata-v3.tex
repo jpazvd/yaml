@@ -18,7 +18,7 @@ A lightweight, dependency-free implementation}
 \maketitle
 
 \begin{abstract}
-YAML (``YAML Ain't Markup Language'') is a widely used, human-readable data-serialization standard that underpins configuration management in modern analytical ecosystems, including GitHub Actions, R and Python pipelines, Jupyter workflows, and cloud-based orchestration tools. Although Stata increasingly participates in multi-language, reproducible workflows, it lacks native support for reading or writing YAML. This article introduces \texttt{yaml}, a unified Stata command that provides nine subcommands for parsing, generating, querying, and validating YAML files. The command enables users to import structured configuration files into datasets or frames, work with metadata programmatically, and export updated configurations back to YAML. The implementation is lightweight, dependency-free, and targets the JSON-compatible subset of the YAML~1.2 specification. We illustrate applications in indicator metadata management using the UNICEF SDMX API, YAML-driven survey microdata harmonization, and configuration validation in automated pipelines. We conclude with recommendations for integrating YAML-based workflows into Stata-centered data production systems.
+YAML (``YAML Ain't Markup Language'') is a widely used, human-readable data-serialization standard that underpins configuration management in modern analytical ecosystems, including GitHub Actions, R and Python pipelines, Jupyter workflows, and cloud-based orchestration tools. Although Stata increasingly participates in multi-language, reproducible workflows, it lacks native support for reading or writing YAML. This article introduces \texttt{yaml}, a unified Stata command that provides nine subcommands for parsing, generating, querying, and validating YAML files. The command enables users to import structured configuration files into datasets or frames, work with metadata programmatically, and export updated configurations back to YAML. The implementation is lightweight, dependency-free, and targets the JSON-compatible subset of the YAML~1.2 specification. An opt-in fast-read mode provides near-linear performance for large metadata catalogs, with field-selective extraction and frame-based caching for repeated queries. Subcommand abbreviations and improved error messages support interactive use. We illustrate applications in indicator metadata management using the UNICEF SDMX API, YAML-driven survey microdata harmonization, and configuration validation in automated pipelines. We conclude with recommendations for integrating YAML-based workflows into Stata-centered data production systems.
 \keywords{\inserttag, yaml, reproducible research, metadata, configuration management, cross-platform workflows}
 \end{abstract}
 
@@ -188,13 +188,32 @@ The parser targets the JSON Schema subset of YAML~1.2 \citep{YAML12}, supporting
     \item hash-based comments (text following \texttt{\#}).
 \end{itemize}
 
-Advanced YAML features—anchors (\texttt{\&ref}), aliases (\texttt{*ref}), explicit type tags, block scalars (\texttt{|}, \texttt{>}), and flow-style mappings (\texttt{\{...\}})—are not supported. This restriction is deliberate and reflects a trade-off between completeness and robustness: most empirical configuration files rely only on the JSON-compatible subset. Malformed indentation or unsupported constructs trigger structured parser errors, ensuring transparent and reproducible behavior.
+Advanced YAML features—anchors (\texttt{\&ref}), aliases (\texttt{*ref}), explicit type tags, and flow-style mappings (\texttt{\{...\}})—are not supported by either parser. Block scalars (\texttt{|}, \texttt{>}) are available as an opt-in extension in fast-read mode via the \texttt{blockscalars} option. These restrictions reflect a deliberate trade-off between completeness and robustness: most empirical configuration files rely only on the JSON-compatible subset. Malformed indentation or unsupported constructs trigger structured parser errors, ensuring transparent and reproducible behavior.
+
+\subsection{Fast-read data model}
+\label{sec:fastread}
+
+The canonical parser produces a rich five-variable schema suitable for arbitrary YAML structures. For large, regularly structured catalogs—such as indicator metadata files with hundreds of top-level entries—a faster alternative is available via the \texttt{fastread} option. The fast-read parser trades generality for speed by assuming a shallow two-level mapping (top-level keys with flat attribute sets) and produces a different output schema:
+
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Variable} & \textbf{Type} & \textbf{Description} \\
+\hline
+\texttt{key}   & str244  & Top-level key name \\
+\texttt{field} & str244  & Attribute name within the key \\
+\texttt{value} & str2000 & Scalar value of the attribute \\
+\texttt{list}  & str2000 & Extracted list items (if \texttt{listkeys()} specified) \\
+\texttt{line}  & int     & Source file line number
+\end{tabular}
+\end{center}
+
+Each row represents one attribute of one top-level key. This row-per-field layout enables direct use of \texttt{levelsof}, \texttt{merge}, and other standard Stata operations without regex-based key parsing. The \texttt{fields()} option further reduces output to only the named attributes, and \texttt{cache()} stores parsed results in a named frame for instant retrieval on subsequent calls to the same file.
 
 Figure~\ref{fig:architecture} summarizes the layered architecture of the \texttt{yaml} command. At the top layer, application-level use cases—such as SDMX API integration, survey harmonization, LLM-based workflows, and CI/CD pipelines—rely on configuration stored in YAML files. The user interface layer provides nine subcommands (\texttt{read}, \texttt{write}, \texttt{get}, \texttt{list}, \texttt{validate}, \texttt{describe}, \texttt{dir}, \texttt{frames}, \texttt{clear}) that mediate access to the underlying storage layer. Data are held either in the current dataset or in named frames (prefixed \texttt{yaml\_}), with each YAML entry represented by five variables (key, value, level, parent, type). The bottom layer handles file-system I/O, reading and writing YAML~1.2-compliant files.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.9\textwidth]{../figures/yaml_layers_bw.pdf}
+\includegraphics[width=0.9\textwidth]{figures/yaml_layers_bw.pdf}
 \caption{Layered architecture of the \texttt{yaml} command. Applications at the top consume YAML-based configuration through a unified subcommand interface. The storage layer uses Stata datasets or frames with a standardized five-variable schema. The file-system layer handles I/O for YAML~1.2-compliant files.}
 \label{fig:architecture}
 \end{figure}
@@ -209,11 +228,13 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
 
 \textbf{Syntax}
 \begin{verbatim}
-. yaml read using filename [, frame(name) locals scalars 
-      prefix(string) replace verbose]
+. yaml read using filename [, frame(name) locals scalars
+      prefix(string) replace verbose fastread fields(string)
+      listkeys(string) cache(string) targets(string) earlyexit
+      stream index(string) blockscalars]
 \end{verbatim}
 
-\textbf{Options}
+\textbf{Core options}
 \begin{itemize}
     \item \texttt{frame(name)} loads the output into frame \texttt{yaml\_name} instead of the current dataset (Stata~16+).
     \item \texttt{locals} also stores values as local macros in \texttt{r()}, using the naming convention \texttt{prefix}{it:key}.
@@ -223,6 +244,23 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
     \item \texttt{verbose} displays parsing progress and diagnostic output.
 \end{itemize}
 
+\textbf{Fast-read options} (opt-in speed-first parser)
+\begin{itemize}
+    \item \texttt{fastread} activates the fast-read parser, producing a flat table with columns \texttt{key}, \texttt{field}, \texttt{value}, \texttt{list}, \texttt{line} (see Section~\ref{sec:fastread}). Not compatible with \texttt{locals} or \texttt{scalars}.
+    \item \texttt{fields(string)} restricts fast-read output to the named fields, reducing memory use and parse time.
+    \item \texttt{listkeys(string)} extracts inline YAML lists for the specified fields into the \texttt{list} column.
+    \item \texttt{cache(string)} stores the parsed result in a named frame cache; subsequent calls with the same file and cache name return the cached data instantly (Stata~16+). \texttt{r(cache\_hit)} indicates whether the cache was used.
+    \item \texttt{blockscalars} enables capture of multi-line block scalars (\texttt{|} and \texttt{>}) in fast-read mode.
+\end{itemize}
+
+\textbf{Canonical-parser options}
+\begin{itemize}
+    \item \texttt{targets(string)} limits parsing to the specified key names; only targeted keys (and their ancestors) are stored, substantially reducing parse time for large files.
+    \item \texttt{earlyexit} stops parsing as soon as all \texttt{targets()} have been found. Requires \texttt{targets()}.
+    \item \texttt{stream} uses streaming tokenization for lower memory overhead on very large files.
+    \item \texttt{index(string)} materializes an auxiliary index frame for faster repeated lookups (Stata~16+).
+\end{itemize}
+
 \textbf{Example}
 \begin{stlog}
 . yaml read using "config.yaml", replace
@@ -230,6 +268,10 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
 
 . yaml read using "indicators.yaml", frame(ind)
 (230 keys read from indicators.yaml into frame yaml_ind)
+
+. yaml read using "indicators.yaml", fastread replace ///
+      fields(name description source_id)
+(733 entries read in fast-read mode)
 \end{stlog}
 
 \textbf{Stored results}
@@ -238,6 +280,7 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
     \item \texttt{r(max\_level)} — maximum nesting depth
     \item \texttt{r(filename)} — name of file read
     \item \texttt{r(frame)} — name of frame created (if \texttt{frame()} is used)
+    \item \texttt{r(cache\_hit)} — 1 if a cached result was returned (fast-read with \texttt{cache()})
 \end{itemize}
 
 Missing or unreadable files produce error messages and no data are imported.
@@ -271,7 +314,7 @@ If the dataset does not contain valid YAML variables (\texttt{key}, \texttt{valu
 
 \subsection{yaml describe}
 
-The \texttt{yaml describe} subcommand displays a compact tree-like representation of YAML data stored in the current dataset or a frame.
+The \texttt{yaml describe} subcommand (abbreviation: \texttt{yaml desc}) displays a compact tree-like representation of YAML data stored in the current dataset or a frame.
 
 \textbf{Syntax}
 \begin{verbatim}
@@ -352,7 +395,7 @@ r(n_attrs)  : "3"
 
 \subsection{yaml validate}
 
-The \texttt{yaml validate} subcommand checks that specified keys exist and that selected keys match required value types.
+The \texttt{yaml validate} subcommand (abbreviation: \texttt{yaml check}) checks that specified keys exist and that selected keys match required value types.
 
 \textbf{Syntax}
 \begin{verbatim}
@@ -395,7 +438,7 @@ YAML data are detected by (1) the presence of standard YAML variables and (2) th
 
 \subsection{yaml frames}
 
-The \texttt{yaml frames} subcommand lists only YAML-related frames, without reporting on the current dataset. This mirrors \texttt{frames dir} but is restricted to frames created by \texttt{yaml read}.
+The \texttt{yaml frames} subcommand (abbreviation: \texttt{yaml frame}) lists only YAML-related frames, without reporting on the current dataset. This mirrors \texttt{frames dir} but is restricted to frames created by \texttt{yaml read}.
 
 \textbf{Syntax}
 \begin{verbatim}
@@ -799,9 +842,9 @@ Several features of the design are particularly valuable for empirical research:
 
 The design also resonates with \citet{knuth84}'s principles of literate programming, which emphasize making analytical logic understandable to humans rather than merely executable by machines. YAML-based configuration naturally supports this philosophy: by externalizing parameters, metadata, and workflow settings into readable files, analysts create systems in which the ``what'' and ``why'' of an analysis are documented alongside the ``how.'' The microdata harmonization example in Section~\ref{sec:applications} illustrates this directly, showing how YAML can simultaneously serve as configuration, documentation, and audit trail. This separation of concerns reflects widely endorsed principles for transparent statistical production, including the United Nations Fundamental Principles of Official Statistics.
 
-The current implementation has limitations. It deliberately targets only the JSON-schema subset of the YAML~1.2 specification (Chapter~10.2). Advanced features such as anchors, aliases, explicit type tags, block scalars, and flow-style mappings are not supported. Parsing relies on indentation rules, so malformed YAML results in structured, human-readable error messages rather than partial recovery. These constraints reflect a deliberate focus on simplicity, predictability, and reproducibility for configuration files, even though they may limit applicability to more complex or free-form YAML documents.
+The current implementation has limitations. The canonical parser deliberately targets only the JSON-schema subset of the YAML~1.2 specification (Chapter~10.2). Advanced features such as anchors, aliases, explicit type tags, and flow-style mappings are not supported. Block scalars (\texttt{|} and \texttt{>}) are available as an opt-in extension in fast-read mode via the \texttt{blockscalars} option but are not handled by the canonical parser. Parsing relies on indentation rules, so malformed YAML results in structured, human-readable error messages rather than partial recovery. The fast-read parser is optimized for shallow two-level mappings and list blocks; deeply nested or irregular structures should use the canonical parser. These constraints reflect a deliberate focus on simplicity, predictability, and reproducibility for configuration files, even though they may limit applicability to more complex or free-form YAML documents.
 
-In practice, YAML configuration files used in UNICEF and similar analytical pipelines are modest in size (tens to a few hundred keys). On such files, parsing and frame creation typically complete in well under a second on standard hardware. The implementation processes files linearly and does not depend on external libraries, so performance scales approximately with the number of keys and lines in the YAML file. For very large or highly nested YAML documents, it may be more appropriate to preprocess the configuration in a dedicated YAML tool and pass a simplified subset to Stata.
+In practice, YAML configuration files used in UNICEF and similar analytical pipelines range from modest (tens of keys) to large (700+ indicator entries). On small files, parsing and frame creation typically complete in well under a second on standard hardware. For large metadata catalogs, the fast-read mode with field-selective extraction and frame-based caching provides near-linear performance, enabling sub-second ingestion of files with hundreds of entries. The canonical parser also offers targeted parsing (\texttt{targets()} with \texttt{earlyexit}) and streaming tokenization (\texttt{stream}) for improved performance on large files without switching to the fast-read schema. The implementation does not depend on external libraries, so performance scales approximately with the number of keys and lines in the YAML file.
 
 An alternative approach is to rely on Stata’s integration with external languages (for example, calling PyYAML via \texttt{python}) or to constrain configuration to JSON only. These strategies can be effective in some settings but introduce external dependencies, complicate deployment in secure or server-based environments, and limit the ability to inspect or edit configuration directly from within Stata. The \texttt{yaml} command complements such approaches by providing a native interface to a widely used configuration language while maintaining maximal portability.
 
@@ -817,8 +860,7 @@ Future extensions could include:
 
 \begin{itemize}
     \item a Mata-based associative dictionary interface layered on top of the frame representation for richer querying;
-    \item helper tools for emitting YAML variants tailored to specific infrastructures (such as GitHub Actions or Quarto metadata blocks);
-    \item support for block scalars (\texttt{|} and \texttt{>}) to accommodate multi-line text; and
+    \item helper tools for emitting YAML variants tailored to specific infrastructures (such as GitHub Actions or Quarto metadata blocks); and
     \item interactive tools for inspecting or editing YAML directly within Stata.
 \end{itemize}
 
