@@ -2,7 +2,7 @@
 
 **Date:** 18Feb2026
 **Owner:** Joao Pedro Azevedo
-**Status:** Phases 1-3 complete; Phase 4 partially complete
+**Status:** All phases complete
 **Scope:** Bug fixes, consistency issues, and targeted enhancements identified during code review
 
 ---
@@ -165,15 +165,15 @@ architecture diagram.
 
 ### CON-7: Submission package is incomplete
 
-**Status:** Pending
+**Status:** Done
 **Files:** `paper/submission/software/`
 
-**Problem:** The submission directory only contains `yaml.ado` (dispatcher)
+**Problem:** The submission directory only contained `yaml.ado` (dispatcher)
 and `yaml.sthlp`. The dispatcher alone cannot function since subcommands
 are in separate `.ado` files.
 
-**Fix:** Copy all files listed in `yaml.pkg` (12 `.ado` + 3 `.sthlp`) into
-the submission software directory.
+**Resolution:** Copied all 15 files listed in `yaml.pkg` (12 `.ado` + 3
+`.sthlp`) into the submission software directory. All files are at v1.5.1.
 
 **Note:** LaTeX paper files were verified clean -- no stale references from
 our code changes (version numbers, level numbering, yaml clear syntax,
@@ -206,29 +206,32 @@ _yaml_pop_parents, return value names all already correct in the `.tex` files).
 
 ### ROB-1: Macro expansion with special characters in parsers
 
-**Status:** Pending
+**Status:** Done
 
 **Files:**
 
-- `src/y/yaml_read.ado` (line 329)
-- `src/_/_yaml_fastread.ado` (lines 40, 140, 153, 156)
+- `src/y/yaml_read.ado`
+- `src/_/_yaml_fastread.ado`
+- `src/_/_yaml_tokenize_line.ado`
 
 **Problem:** YAML values containing backticks, dollar signs, or unbalanced
-quotes will break macro expansion in lines like:
+quotes would break macro expansion in lines like:
 
 ```stata
 local trimmed = strtrim("`line'")
 ```
 
-**Fix:** Use compound quotes in all parser lines that handle raw file input:
+**Resolution:** Replaced simple quotes with compound quotes in all parser
+lines that handle raw file input or derived values:
 
 ```stata
 local trimmed = strtrim(`"`line'"')
 ```
 
-**Risk:** High blast radius -- touches the core parser loops in both the
-canonical and fastread parsers. Should be done on its own branch with
-before/after testing against all existing YAML fixtures.
+Changed ~50 instances across all 3 parser files: `strtrim()`, `substr()`,
+`strpos()`, `regexm()`, `inlist()`, comparisons, and assignments on `line`,
+`trimmed`, `templine`, `value`, `item_value`, `right`, `block_val`,
+`pending_line`, and `tmp` locals. Submission copies updated.
 
 ---
 
@@ -236,24 +239,25 @@ before/after testing against all existing YAML fixtures.
 
 ### QA-1: Add regression tests for new bugs
 
-**Status:** Pending
+**Status:** Done
 
-Add to `qa/run_tests.do`:
+Added 5 regression tests to `qa/run_tests.do`:
 
-| Test ID | Description | Fixture needed |
-| ------- | ----------- | -------------- |
-| REG-04 | Round-trip read/write produces valid YAML | `qa/fixtures/roundtrip.yaml` |
-| REG-05 | `yaml validate` type check matches correct row | `qa/fixtures/validate_types.yaml` |
-| REG-06 | Fastread handles brackets/braces in values | `qa/fixtures/brackets_in_values.yaml` |
-| REG-07 | Early-exit with targets does not double-close file | existing fixtures suffice |
-| REG-08 | `yaml list` header displays correctly with parent filter | existing fixtures suffice |
+| Test ID | Script | Fixture |
+| ------- | ------ | ------- |
+| REG-04 | `qa/scripts/test_roundtrip.do` | `qa/fixtures/roundtrip.yaml` |
+| REG-05 | `qa/scripts/test_validate_types.do` | `qa/fixtures/validate_types.yaml` |
+| REG-06 | `qa/scripts/test_brackets_in_values.do` | `qa/fixtures/brackets_in_values.yaml` |
+| REG-07 | `qa/scripts/test_early_exit.do` | existing fixtures |
+| REG-08 | `qa/scripts/test_list_header.do` | existing fixtures |
 
 ### QA-2: Add a write-specific test fixture
 
-**Status:** Pending
+**Status:** Done
 
-Currently there are no tests that exercise `yaml write` and verify the output
-file content. The round-trip test (REG-04) would be the first.
+**Resolution:** The round-trip test (REG-04) reads `roundtrip.yaml`, writes
+it to a temp file, reads it back, and compares key counts and spot-checked
+values including nested keys and list items.
 
 ---
 
@@ -264,9 +268,9 @@ file content. The round-trip test (REG-04) would be the first.
 | **Phase 1: Critical fixes** | ~~BUG-4, BUG-5, BUG-6, BUG-7~~ | Done |
 | **Phase 2: Consistency** | ~~CON-1, CON-2, CON-3, CON-4, CON-5, CON-6, HYG-1~~ | Done |
 | **Phase 3: Low-severity bugs** | ~~BUG-8, BUG-9~~ | Done |
-| **Phase 4: Robustness** | ~~HYG-2~~, ROB-1 | HYG-2 done (BUG-4); ROB-1 pending |
-| **Phase 5: Packaging** | CON-7 | Submission copy matches source |
-| **Phase 6: QA** | QA-1, QA-2 | Regression coverage for all fixes |
+| **Phase 4: Robustness** | ~~HYG-2, ROB-1~~ | Done |
+| **Phase 5: Packaging** | ~~CON-7~~ | Done |
+| **Phase 6: QA** | ~~QA-1, QA-2~~ | Done |
 
 ### Commit Log
 
