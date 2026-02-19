@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_list
-*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * List keys and values in YAML data
 *******************************************************************************
 
@@ -91,7 +91,8 @@ program define _yaml_list_impl, rclass
     local key_list ""
     local val_list ""
     local n = _N
-    
+    local header_shown = 0
+
     forvalues i = 1/`n' {
         local k = key[`i']
         local v = value[`i']
@@ -142,16 +143,25 @@ program define _yaml_list_impl, rclass
         
         * Display row
         if (`show_header') {
+            if (`header_shown' == 0) {
+                local header_shown = 1
+                if ("`keys'" != "" & "`values'" != "") {
+                    di as text "Key" _col(35) "Value"
+                }
+                else if ("`keys'" != "") {
+                    di as text "Key"
+                }
+                else if ("`values'" != "") {
+                    di as text "Value"
+                }
+            }
             if ("`keys'" != "" & "`values'" != "") {
-                if (`i' == 1) di as text "Key" _col(35) "Value"
                 di as text "`k'" _col(35) "`v'"
             }
             else if ("`keys'" != "") {
-                if (`i' == 1) di as text "Key"
                 di as text "`k'"
             }
             else if ("`values'" != "") {
-                if (`i' == 1) di as text "Value"
                 di as text "`v'"
             }
         }
