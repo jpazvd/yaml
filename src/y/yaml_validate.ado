@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_validate
-*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Validate YAML data
 *******************************************************************************
 
@@ -90,7 +90,14 @@ program define _yaml_validate_impl, rclass
                 
                 qui count if key == "`tkey'"
                 if (r(N) > 0) {
-                    local actual_type = type[1]
+                    * Find the matching row (not necessarily row 1)
+                    local actual_type ""
+                    forvalues _vi = 1/`=_N' {
+                        if (key[`_vi'] == "`tkey'") {
+                            local actual_type = type[`_vi']
+                            continue, break
+                        }
+                    }
                     if ("`actual_type'" != "`ttype'") {
                         local valid = 0
                         local n_warnings = `n_warnings' + 1
