@@ -1,3 +1,65 @@
-YAML QA Test History
+================================================================================
+YAML QA TEST HISTORY
+================================================================================
+This file records all test runs for yaml package.
+Each entry shows: date/time, version tested, Stata version, and results.
+================================================================================
 
-- 04Feb2026: Initialized QA framework (no run yet)
+======================================================================
+Test Run:  19 Feb 2026
+Started:   14:02:41
+Ended:     14:02:46
+Duration:  0m 5s
+Branch:    fix/pr2-package-consistency
+Version:   1.5.1
+Stata:     17
+Tests:     14 run, 13 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     EX-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   14:16:47
+Ended:     14:16:50
+Duration:  0m 3s
+Branch:    fix/pr2-package-consistency
+Version:   1.5.1
+Stata:     17
+Tests:     14 run, 13 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     EX-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   14:44:26
+Ended:     14:44:34
+Duration:  0m 8s
+Branch:    fix/pr2-package-consistency
+Version:   1.5.1
+Stata:     17
+Tests:     14 run, 13 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     EX-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   14:49:03
+Ended:     14:49:05
+Duration:  0m 2s
+Branch:    fix/pr2-package-consistency
+Version:   1.5.1
+Stata:     17
+Tests:     14 run, 14 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================

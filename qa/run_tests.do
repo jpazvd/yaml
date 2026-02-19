@@ -1,8 +1,9 @@
 *! run_tests.do
 *! YAML QA runner
-*! Date: 05Feb2026
+*! Date: 19Feb2026
 
 clear all
+discard
 set more off
 set linesize 80
 cap log close _all
@@ -69,6 +70,42 @@ if _rc != 0 {
 	log using "`logfile'", replace text name(_testlog)
 }
 
+* Capture start time
+local start_time = c(current_time)
+
+* Extract yaml.ado version
+local ado_version "unknown"
+cap findfile yaml.ado
+if _rc == 0 {
+	local fn = r(fn)
+	local fnsafe = subinstr("`fn'","\\","/",.)
+	tempname fh
+	cap file open `fh' using "`fnsafe'", read
+	if _rc == 0 {
+		file read `fh' line
+		while r(eof)==0 & "`ado_version'"=="unknown" {
+			if regexm(`"`line'"', "^[*]! v ([0-9]+[.][0-9]+[.][0-9]+)") {
+				local ado_version = regexs(1)
+			}
+			file read `fh' line
+		}
+		file close `fh'
+	}
+}
+
+* Get git branch name
+local git_branch "(unknown)"
+cap {
+	tempfile gitbranch
+	shell git -C "`root'" branch --show-current > "`gitbranch'" 2>&1
+	tempname gbfh
+	file open `gbfh' using "`gitbranch'", read text
+	file read `gbfh' git_branch
+	file close `gbfh'
+	local git_branch = strtrim("`git_branch'")
+	if "`git_branch'" == "" local git_branch "(unknown)"
+}
+
 if `verbose' == 1 {
 	set trace on
 	set tracedepth 4
@@ -84,38 +121,7 @@ global failed_tests = ""
 * HELPER PROGRAMS
 *===============================================================================
 
-capture program drop test_start
-program define test_start
-	syntax, id(string) desc(string)
-
-	global test_count = $test_count + 1
-	di as text ""
-	di as text "{hline 70}"
-	di as result "TEST `id': " as text "`desc'"
-	di as text "{hline 70}"
-end
-
-capture program drop test_pass
-program define test_pass
-	syntax, id(string)
-	global pass_count = $pass_count + 1
-	di as result "PASS `id'"
-end
-
-capture program drop test_fail
-program define test_fail
-	syntax, id(string) msg(string)
-	global fail_count = $fail_count + 1
-	global failed_tests = "$failed_tests `id'"
-	di as error "FAIL `id': `msg'"
-end
-
-capture program drop test_skip
-program define test_skip
-	syntax, id(string) msg(string)
-	global skip_count = $skip_count + 1
-	di as text "SKIP `id': `msg'"
-end
+qui do "`qadir'/_define_helpers.do"
 
 *===============================================================================
 * DISPLAY HEADER
@@ -182,7 +188,7 @@ if "`target_test'" == "" | "`target_test'" == "ENV-03" {
 			local vmatch 0
 			file read `fh' line
 			while r(eof)==0 & `vmatch'==0 {
-				if regexm("`line'", "^\\*! v [0-9]+\\.[0-9]+\\.[0-9]+") {
+				if regexm(`"`line'"', "^[*]! v [0-9]+[.][0-9]+[.][0-9]+") {
 					local vmatch 1
 				}
 				file read `fh' line
@@ -201,36 +207,48 @@ if "`target_test'" == "" | "`target_test'" == "ENV-03" {
 * EX-01: examples/test_yaml.do
 if "`target_test'" == "" | "`target_test'" == "EX-01" {
 	test_start, id("EX-01") desc("examples/test_yaml.do")
-	capture quietly do "`exdir'/test_yaml.do"
-	if _rc == 0 {
+	quietly cd "`exdir'"
+	capture quietly do "test_yaml.do"
+	local erc = _rc
+	quietly cd "`root'"
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("EX-01")
 	}
 	else {
-		test_fail, id("EX-01") msg("test_yaml.do failed (rc=`=_rc')")
+		test_fail, id("EX-01") msg("test_yaml.do failed (rc=`erc')")
 	}
 }
 
 * EX-02: examples/test_yaml_improvements.do
 if "`target_test'" == "" | "`target_test'" == "EX-02" {
 	test_start, id("EX-02") desc("examples/test_yaml_improvements.do")
-	capture quietly do "`exdir'/test_yaml_improvements.do"
-	if _rc == 0 {
+	quietly cd "`exdir'"
+	capture quietly do "test_yaml_improvements.do"
+	local erc = _rc
+	quietly cd "`root'"
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("EX-02")
 	}
 	else {
-		test_fail, id("EX-02") msg("test_yaml_improvements.do failed (rc=`=_rc')")
+		test_fail, id("EX-02") msg("test_yaml_improvements.do failed (rc=`erc')")
 	}
 }
 
 * EX-03: examples/yaml_basic_examples.do
 if "`target_test'" == "" | "`target_test'" == "EX-03" {
 	test_start, id("EX-03") desc("examples/yaml_basic_examples.do")
-	capture quietly do "`exdir'/yaml_basic_examples.do"
-	if _rc == 0 {
+	quietly cd "`exdir'"
+	capture quietly do "yaml_basic_examples.do"
+	local erc = _rc
+	quietly cd "`root'"
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("EX-03")
 	}
 	else {
-		test_fail, id("EX-03") msg("yaml_basic_examples.do failed (rc=`=_rc')")
+		test_fail, id("EX-03") msg("yaml_basic_examples.do failed (rc=`erc')")
 	}
 }
 
@@ -238,11 +256,13 @@ if "`target_test'" == "" | "`target_test'" == "EX-03" {
 if "`target_test'" == "" | "`target_test'" == "REG-01" {
 	test_start, id("REG-01") desc("nested lists and parent hierarchy (BUG-1/BUG-2)")
 	capture quietly do "`qadir'/scripts/test_bug1_bug2.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-01")
 	}
 	else {
-		test_fail, id("REG-01") msg("test_bug1_bug2.do failed (rc=`=_rc')")
+		test_fail, id("REG-01") msg("test_bug1_bug2.do failed (rc=`erc')")
 	}
 }
 
@@ -251,11 +271,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-02" {
 	test_start, id("REG-02") desc("frame return value propagation (BUG-3)")
 	if `c(stata_version)' >= 16 {
 		capture quietly do "`qadir'/scripts/test_bug3_frame_returns.do"
-		if _rc == 0 {
+		local erc = _rc
+		qui do "`qadir'/_define_helpers.do"
+		if `erc' == 0 {
 			test_pass, id("REG-02")
 		}
 		else {
-			test_fail, id("REG-02") msg("test_bug3_frame_returns.do failed (rc=`=_rc')")
+			test_fail, id("REG-02") msg("test_bug3_frame_returns.do failed (rc=`erc')")
 		}
 	}
 	else {
@@ -267,11 +289,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-02" {
 if "`target_test'" == "" | "`target_test'" == "REG-03" {
 	test_start, id("REG-03") desc("subcommand abbreviations (desc, frame, check)")
 	capture quietly do "`qadir'/scripts/test_abbreviations.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-03")
 	}
 	else {
-		test_fail, id("REG-03") msg("test_abbreviations.do failed (rc=`=_rc')")
+		test_fail, id("REG-03") msg("test_abbreviations.do failed (rc=`erc')")
 	}
 }
 
@@ -279,11 +303,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-03" {
 if "`target_test'" == "" | "`target_test'" == "REG-04" {
 	test_start, id("REG-04") desc("round-trip read/write produces valid YAML (BUG-4)")
 	capture quietly do "`qadir'/scripts/test_roundtrip.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-04")
 	}
 	else {
-		test_fail, id("REG-04") msg("test_roundtrip.do failed (rc=`=_rc')")
+		test_fail, id("REG-04") msg("test_roundtrip.do failed (rc=`erc')")
 	}
 }
 
@@ -291,11 +317,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-04" {
 if "`target_test'" == "" | "`target_test'" == "REG-05" {
 	test_start, id("REG-05") desc("yaml validate type check matches correct row (BUG-5)")
 	capture quietly do "`qadir'/scripts/test_validate_types.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-05")
 	}
 	else {
-		test_fail, id("REG-05") msg("test_validate_types.do failed (rc=`=_rc')")
+		test_fail, id("REG-05") msg("test_validate_types.do failed (rc=`erc')")
 	}
 }
 
@@ -303,11 +331,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-05" {
 if "`target_test'" == "" | "`target_test'" == "REG-06" {
 	test_start, id("REG-06") desc("fastread handles brackets/braces in values (BUG-6)")
 	capture quietly do "`qadir'/scripts/test_brackets_in_values.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-06")
 	}
 	else {
-		test_fail, id("REG-06") msg("test_brackets_in_values.do failed (rc=`=_rc')")
+		test_fail, id("REG-06") msg("test_brackets_in_values.do failed (rc=`erc')")
 	}
 }
 
@@ -315,11 +345,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-06" {
 if "`target_test'" == "" | "`target_test'" == "REG-07" {
 	test_start, id("REG-07") desc("early-exit does not double-close file handle (BUG-7)")
 	capture quietly do "`qadir'/scripts/test_early_exit.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-07")
 	}
 	else {
-		test_fail, id("REG-07") msg("test_early_exit.do failed (rc=`=_rc')")
+		test_fail, id("REG-07") msg("test_early_exit.do failed (rc=`erc')")
 	}
 }
 
@@ -327,11 +359,13 @@ if "`target_test'" == "" | "`target_test'" == "REG-07" {
 if "`target_test'" == "" | "`target_test'" == "REG-08" {
 	test_start, id("REG-08") desc("yaml list header with parent filter (BUG-8)")
 	capture quietly do "`qadir'/scripts/test_list_header.do"
-	if _rc == 0 {
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
 		test_pass, id("REG-08")
 	}
 	else {
-		test_fail, id("REG-08") msg("test_list_header.do failed (rc=`=_rc')")
+		test_fail, id("REG-08") msg("test_list_header.do failed (rc=`erc')")
 	}
 }
 
@@ -341,21 +375,81 @@ if "`target_test'" == "" | "`target_test'" == "REG-08" {
 
 di as text ""
 di as text "{hline 70}"
-di as text "SUMMARY"
+di as text "{bf:{center 70:TEST SUMMARY}}"
 di as text "{hline 70}"
-di as text "Tests run: " $test_count
-di as text "Passed:    " $pass_count
-di as text "Failed:    " $fail_count
-di as text "Skipped:   " $skip_count
-if "$failed_tests" != "" {
-	di as text "Failed tests: " "$failed_tests"
+di as text ""
+di as text "  Total Tests:   " as result $test_count
+di as result "  Passed:        " $pass_count
+if $fail_count > 0 {
+	di as err "  Failed:        " $fail_count
 }
-di as text "{hline 70}"
+else {
+	di as text "  Failed:        " as result $fail_count
+}
+di as text "  Skipped:       " $skip_count
+di as text ""
 
-cap file open fh using "`histfile'", write append
-if _rc == 0 {
-	file write fh "`c(current_date)' `c(current_time)'" _tab "pass=$pass_count fail=$fail_count skip=$skip_count" _n
-	file close fh
+if $fail_count == 0 {
+	di as result "  ALL TESTS PASSED"
 }
+else {
+	di as err "  SOME TESTS FAILED"
+	di as text "  Failed: $failed_tests"
+}
+di as text "{hline 70}"
 
 log close _testlog
+
+*===============================================================================
+* WRITE TO TEST HISTORY
+*===============================================================================
+
+* Capture end time and calculate duration
+local end_time = c(current_time)
+local start_h = real(substr("`start_time'", 1, 2))
+local start_m = real(substr("`start_time'", 4, 2))
+local start_s = real(substr("`start_time'", 7, 2))
+local end_h = real(substr("`end_time'", 1, 2))
+local end_m = real(substr("`end_time'", 4, 2))
+local end_s = real(substr("`end_time'", 7, 2))
+local start_secs = `start_h' * 3600 + `start_m' * 60 + `start_s'
+local end_secs = `end_h' * 3600 + `end_m' * 60 + `end_s'
+local duration_secs = `end_secs' - `start_secs'
+if `duration_secs' < 0 local duration_secs = `duration_secs' + 86400
+local duration_min = floor(`duration_secs' / 60)
+local duration_sec = mod(`duration_secs', 60)
+local duration_str = "`duration_min'm `duration_sec's"
+
+* Write to history file (only if running all tests)
+if "`target_test'" == "" {
+	local sep "======================================================================"
+
+	cap file open fh using "`histfile'", write append
+	if _rc == 0 {
+		file write fh _n "`sep'" _n
+		file write fh "Test Run:  `c(current_date)'" _n
+		file write fh "Started:   `start_time'" _n
+		file write fh "Ended:     `end_time'" _n
+		file write fh "Duration:  `duration_str'" _n
+		file write fh "Branch:    `git_branch'" _n
+		file write fh "Version:   `ado_version'" _n
+		file write fh "Stata:     `c(stata_version)'" _n
+		file write fh "Tests:     $test_count run, $pass_count passed, $fail_count failed" _n
+		file write fh "Skipped:   $skip_count" _n
+		if $fail_count == 0 {
+			file write fh "Result:    ALL TESTS PASSED" _n
+		}
+		else {
+			file write fh "Result:    FAILED" _n
+			file write fh "Failed:    $failed_tests" _n
+		}
+		file write fh "Log:       run_tests.log" _n
+		file write fh "`sep'" _n
+		file close fh
+
+		di as text "History appended to: `histfile'"
+	}
+}
+else {
+	di as text "(Single test mode - history not updated)"
+}
