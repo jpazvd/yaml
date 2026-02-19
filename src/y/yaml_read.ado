@@ -321,24 +321,24 @@ program define yaml_read, rclass
         local is_list = 0
         if ("`stream'" != "") {
             _yaml_tokenize_line, line(`"`line'"')
-            local trimmed "`s(trimmed)'"
+            local trimmed `"`s(trimmed)'"'
             local indent = `s(indent)'
             local is_list = `s(is_list)'
         }
         else {
-            local trimmed = strtrim("`line'")
-            if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
+            local trimmed = strtrim(`"`line'"')
+            if (`"`trimmed'"' == "" | substr(`"`trimmed'"', 1, 1) == "#") {
                 file read `fh' line
                 continue
             }
             * Calculate indentation (count leading spaces)
-            local templine "`line'"
-            while (substr("`templine'", 1, 1) == " ") {
+            local templine `"`line'"'
+            while (substr(`"`templine'"', 1, 1) == " ") {
                 local indent = `indent' + 1
-                local templine = substr("`templine'", 2, .)
+                local templine = substr(`"`templine'"', 2, .)
             }
         }
-        if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
+        if (`"`trimmed'"' == "" | substr(`"`trimmed'"', 1, 1) == "#") {
             file read `fh' line
             continue
         }
@@ -382,12 +382,12 @@ program define yaml_read, rclass
         
         * Check if it's a list item (starts with -)
         if ("`stream'" == "") {
-            local is_list = (substr("`trimmed'", 1, 2) == "- ")
+            local is_list = (substr(`"`trimmed'"', 1, 2) == "- ")
         }
-        
+
         if (`is_list') {
             * List item - store as separate row with type "list_item"
-            local item_value = strtrim(substr("`trimmed'", 3, .))
+            local item_value = strtrim(substr(`"`trimmed'"', 3, .))
             
             * Increment list index for this parent
             local list_index = `list_index' + 1
@@ -402,7 +402,7 @@ program define yaml_read, rclass
             }
             
             local vtype "list_item"
-            local value "`item_value'"
+            local value `"`item_value'"'
             
             * The parent for list items is the list key itself
             local this_parent "`last_key'"
@@ -468,19 +468,19 @@ program define yaml_read, rclass
             local list_index = 0
             
             * Key-value pair or nested key
-            local colon_pos = strpos("`trimmed'", ":")
-            
+            local colon_pos = strpos(`"`trimmed'"', ":")
+
             if (`colon_pos' > 0) {
-                local key = strtrim(substr("`trimmed'", 1, `colon_pos' - 1))
-                local value = strtrim(substr("`trimmed'", `colon_pos' + 1, .))
+                local key = strtrim(substr(`"`trimmed'"', 1, `colon_pos' - 1))
+                local value = strtrim(substr(`"`trimmed'"', `colon_pos' + 1, .))
                 
                 * Reset vtype for this new key-value pair
                 local vtype ""
                 
                 * Remove quotes from value if present (and remember it was quoted)
                 local was_quoted = 0
-                if (substr("`value'", 1, 1) == `"""' | substr("`value'", 1, 1) == "'") {
-                    local value = substr("`value'", 2, length("`value'") - 2)
+                if (substr(`"`value'"', 1, 1) == `"""' | substr(`"`value'"', 1, 1) == "'") {
+                    local value = substr(`"`value'"', 2, length(`"`value'"') - 2)
                     local was_quoted = 1
                 }
                 
@@ -511,7 +511,7 @@ program define yaml_read, rclass
                 * Determine type and save current parent for storage
                 local this_parent "`parent_stack'"
                 
-                if ("`value'" == "") {
+                if (`"`value'"' == "") {
                     local vtype "parent"
                     * This key becomes a parent for nested items AFTER storing
                     local last_key "`full_key'"
@@ -527,15 +527,15 @@ program define yaml_read, rclass
                             local vtype "numeric"
                         }
                     }
-                    if ("`vtype'" == "" & inlist("`value'", "true", "True", "TRUE", "yes", "Yes", "YES")) {
+                    if ("`vtype'" == "" & inlist(`"`value'"', "true", "True", "TRUE", "yes", "Yes", "YES")) {
                         local vtype "boolean"
                         local value "1"
                     }
-                    else if ("`vtype'" == "" & inlist("`value'", "false", "False", "FALSE", "no", "No", "NO")) {
+                    else if ("`vtype'" == "" & inlist(`"`value'"', "false", "False", "FALSE", "no", "No", "NO")) {
                         local vtype "boolean"
                         local value "0"
                     }
-                    else if ("`vtype'" == "" & ("`value'" == "null" | "`value'" == "~")) {
+                    else if ("`vtype'" == "" & (`"`value'"' == "null" | `"`value'"' == "~")) {
                         local vtype "null"
                         local value ""
                     }
@@ -576,7 +576,7 @@ program define yaml_read, rclass
 
                 if ("`locals'" != "") {
                     * Store as return local (using truncated key)
-                    if ("`value'" != "") {
+                    if (`"`value'"' != "") {
                         return local `prefix'`short_key' `"`value'"'
                         
                         if ("`verbose'" != "") {
@@ -587,7 +587,7 @@ program define yaml_read, rclass
                 
                 if ("`scalars'" != "" & "`vtype'" == "numeric") {
                     * Store as scalar (using truncated key)
-                    scalar `prefix'`short_key' = real("`value'")
+                    scalar `prefix'`short_key' = real(`"`value'"')
                     
                     if ("`verbose'" != "") {
                         di as text "  scalar `prefix'`short_key' = " as result `value'

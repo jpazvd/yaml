@@ -32,42 +32,42 @@ program define _yaml_fastread
     file read `fh' line
     while r(eof) == 0 | `has_pending' == 1 {
         if (`has_pending' == 1) {
-            local line "`pending_line'"
+            local line `"`pending_line'"'
             local has_pending = 0
         }
         local linenum = `linenum' + 1
 
-        local trimmed = strtrim("`line'")
-        if ("`trimmed'" == "" | substr("`trimmed'", 1, 1) == "#") {
+        local trimmed = strtrim(`"`line'"')
+        if (`"`trimmed'"' == "" | substr(`"`trimmed'"', 1, 1) == "#") {
             if (`has_pending' == 0) file read `fh' line
             continue
         }
 
         * Unsupported YAML features in fastread: anchors, aliases, merge keys
-        if (regexm("`trimmed'", "^&") | regexm("`trimmed'", "^\\*") | ///
-            regexm("`trimmed'", "^<<:")) {
+        if (regexm(`"`trimmed'"', "^&") | regexm(`"`trimmed'"', "^\\*") | ///
+            regexm(`"`trimmed'"', "^<<:")) {
             di as err "fastread unsupported YAML feature at line `linenum'. Rerun without fastread."
             exit 198
         }
         * Flow collections: only flag when line or value starts with { or [
-        if (substr("`trimmed'", 1, 1) == "{" | substr("`trimmed'", 1, 1) == "[") {
+        if (substr(`"`trimmed'"', 1, 1) == "{" | substr(`"`trimmed'"', 1, 1) == "[") {
             di as err "fastread unsupported flow collection at line `linenum'. Rerun without fastread."
             exit 198
         }
 
         * Count indent
         local indent = 0
-        local templine "`line'"
-        while (substr("`templine'", 1, 1) == " ") {
+        local templine `"`line'"'
+        while (substr(`"`templine'"', 1, 1) == " ") {
             local indent = `indent' + 1
-            local templine = substr("`templine'", 2, .)
+            local templine = substr(`"`templine'"', 2, .)
         }
 
         * List item
-        if (substr("`trimmed'", 1, 2) == "- ") {
-            local item_value = strtrim(substr("`trimmed'", 3, .))
-            if (substr("`item_value'", 1, 1) == `"""' | substr("`item_value'", 1, 1) == "'") {
-                local item_value = substr("`item_value'", 2, length("`item_value'") - 2)
+        if (substr(`"`trimmed'"', 1, 2) == "- ") {
+            local item_value = strtrim(substr(`"`trimmed'"', 3, .))
+            if (substr(`"`item_value'"', 1, 1) == `"""' | substr(`"`item_value'"', 1, 1) == "'") {
+                local item_value = substr(`"`item_value'"', 2, length(`"`item_value'"') - 2)
             }
 
             local allow_list = 1
@@ -99,12 +99,12 @@ program define _yaml_fastread
         }
 
         * Key or field line
-        local colon_pos = strpos("`trimmed'", ":")
+        local colon_pos = strpos(`"`trimmed'"', ":")
         if (`colon_pos' > 0) {
-            local left = strtrim(substr("`trimmed'", 1, `colon_pos' - 1))
-            local right = strtrim(substr("`trimmed'", `colon_pos' + 1, .))
+            local left = strtrim(substr(`"`trimmed'"', 1, `colon_pos' - 1))
+            local right = strtrim(substr(`"`trimmed'"', `colon_pos' + 1, .))
 
-            if ("`right'" == "") {
+            if (`"`right'"' == "") {
                 * Header (key)
                 if (`indent' > `current_indent') {
                     local n_levels = `n_levels' + 1
@@ -129,46 +129,46 @@ program define _yaml_fastread
             else {
                 * Field with value
                 local current_field "`left'"
-                local value = "`right'"
+                local value = `"`right'"'
                 * Flow collection as value
-                if (substr("`value'", 1, 1) == "{" | substr("`value'", 1, 1) == "[") {
+                if (substr(`"`value'"', 1, 1) == "{" | substr(`"`value'"', 1, 1) == "[") {
                     di as err "fastread unsupported flow collection at line `linenum'. Rerun without fastread."
                     exit 198
                 }
-                if ("`blockscalars'" == "" & inlist("`value'", "|", "|-", ">", ">-")) {
+                if ("`blockscalars'" == "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
                     di as err "fastread unsupported block scalar at line `linenum'. Rerun without fastread or use blockscalars."
                     exit 198
                 }
                 * Optional block scalar capture
-                if ("`blockscalars'" != "" & inlist("`value'", "|", "|-", ">", ">-")) {
+                if ("`blockscalars'" != "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
                     local block_indent = `indent'
                     local block_val ""
                     file read `fh' line
                     while (r(eof) == 0) {
-                        local next_trim = strtrim("`line'")
+                        local next_trim = strtrim(`"`line'"')
                         local next_indent = 0
-                        local tmp "`line'"
-                        while (substr("`tmp'", 1, 1) == " ") {
+                        local tmp `"`line'"'
+                        while (substr(`"`tmp'"', 1, 1) == " ") {
                             local next_indent = `next_indent' + 1
-                            local tmp = substr("`tmp'", 2, .)
+                            local tmp = substr(`"`tmp'"', 2, .)
                         }
                         if (`next_indent' <= `block_indent') {
-                            local pending_line "`line'"
+                            local pending_line `"`line'"'
                             local has_pending = 1
                             continue, break
                         }
-                        if ("`block_val'" == "") {
-                            local block_val = strtrim("`line'")
+                        if (`"`block_val'"' == "") {
+                            local block_val = strtrim(`"`line'"')
                         }
                         else {
-                            local block_val = "`block_val'" + char(10) + strtrim("`line'")
+                            local block_val = `"`block_val'"' + char(10) + strtrim(`"`line'"')
                         }
                         file read `fh' line
                     }
-                    local value "`block_val'"
+                    local value `"`block_val'"'
                 }
-                if (substr("`value'", 1, 1) == `"""' | substr("`value'", 1, 1) == "'") {
-                    local value = substr("`value'", 2, length("`value'") - 2)
+                if (substr(`"`value'"', 1, 1) == `"""' | substr(`"`value'"', 1, 1) == "'") {
+                    local value = substr(`"`value'"', 2, length(`"`value'"') - 2)
                 }
 
                 local allow_field = 1
