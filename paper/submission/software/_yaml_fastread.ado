@@ -2,6 +2,26 @@
 * _yaml_fastread
 *! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Fast-read parser (opt-in): shallow mappings + list blocks
+*
+* Data model (differs from canonical parser):
+*   key   (str)  - Top-level section header (first-level mapping key)
+*   field (str)  - Field name within that section
+*   value (str)  - Scalar value or list item text
+*   list  (int)  - 1 = list item, 0 = scalar field
+*   line  (int)  - Source file line number
+*
+* Canonical parser produces: key / value / level / parent / type
+* Fastread produces:         key / field / value / list  / line
+*
+* Options:
+*   fields(list)       - Keep only these field names (semicolon- or space-separated)
+*   listkeys(list)     - Keep list items only under these field names
+*   blockscalars       - Capture | and > block scalars (joined with char(10))
+*
+* Limitations:
+*   - Rejects anchors (&), aliases (*), merge keys (<<:)
+*   - Rejects flow collections ({ } [ ]) at line start or value position
+*   - Designed for shallow YAML (1-2 levels of nesting)
 *******************************************************************************
 
 program define _yaml_fastread

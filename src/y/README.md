@@ -105,6 +105,24 @@ countries_2     ARG     countries   list_item
 countries_3     CHL     countries   list_item
 ```
 
+### Fast-Read Data Model
+
+When `yaml read` is called with the `fastread` option, parsing is delegated to
+`_yaml_fastread.ado`, which produces a different (flatter) schema optimized for
+shallow YAML files with one level of section headers:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | str | Top-level section header |
+| `field` | str | Field name within that section |
+| `value` | str | Scalar value or list-item text |
+| `list` | int | 1 = list item, 0 = scalar field |
+| `line` | int | Source file line number |
+
+Fastread does not track `level`, `parent`, or `type`. It rejects anchors,
+aliases, and flow collections, exiting with an error message that suggests
+re-running without `fastread`.
+
 ## Syntax
 
 ### yaml read
