@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_dir
-*! v 1.5.0   04Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
 * List all YAML data in memory
 *******************************************************************************
 
@@ -10,15 +10,18 @@ program define yaml_dir, rclass
     syntax [, Detail]
     
     local count = 0
-    
+    local n_dataset = 0
+    local n_frames = 0
+
     di as text "{hline 60}"
     di as text "YAML data in memory"
     di as text "{hline 60}"
-    
+
     * Check current dataset
     capture confirm variable key value level type
     if (_rc == 0) {
         local count = `count' + 1
+        local n_dataset = 1
         di as text "  `count'. {cmd:current dataset}"
         if ("`detail'" != "") {
             di as text "     Entries: " _N
@@ -36,6 +39,7 @@ program define yaml_dir, rclass
         foreach fname of local all_frames {
             if (substr("`fname'", 1, 5) == "yaml_") {
                 local count = `count' + 1
+                local n_frames = `n_frames' + 1
                 if ("`detail'" != "") {
                     frame `fname' {
                         local nobs = _N
@@ -63,5 +67,7 @@ program define yaml_dir, rclass
     di as text "{hline 60}"
     di as text "Total: `count' YAML dataset/frame(s)"
     
-    return scalar n_yaml = `count'
+    return scalar n_total = `count'
+    return scalar n_dataset = `n_dataset'
+    return scalar n_frames = `n_frames'
 end
