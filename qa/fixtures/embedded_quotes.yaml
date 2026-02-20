@@ -1,0 +1,14 @@
+# Fixture: embedded double quotes in values
+# Tests that Mata st_sstore handles values containing " characters
+
+indicators:
+  SP_POP_TOTL:
+    name: 'Population, total'
+    source_org: 'LAC Equity Lab based on "Out of School" dataset'
+    description: 'Total population is based on the de facto definition of population'
+    note: 'Data includes "estimates" and "projections" from UN sources'
+
+  SE_PRE_ENRR:
+    name: 'Gross enrollment ratio, preprimary, both sexes (%)'
+    source_org: 'UNESCO Institute for Statistics ("UIS")'
+    description: Enrollment as a percentage of the population of the official age group

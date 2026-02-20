@@ -1,0 +1,31 @@
+# Fixture: long string values exceeding str2000 limit
+# Tests that strL option prevents truncation
+
+metadata:
+  indicator:
+    name: Test indicator with a very long description
+    description: >
+      This is a very long description that is designed to exceed the default
+      str2000 character limit in Stata. It contains detailed methodology notes,
+      data collection procedures, and extensive documentation about how the
+      indicator is calculated and what it measures. The description continues
+      with more information about the data sources used, the geographic coverage
+      of the indicator, and the time period for which data is available. It also
+      includes notes about data quality, limitations, and comparability across
+      countries and over time. Furthermore, it provides guidance on how to
+      interpret the indicator values and what policy implications can be drawn
+      from the data. Additional technical notes describe the statistical methods
+      used in estimation, including model specifications, assumptions, and
+      sensitivity analyses. The documentation also covers the revision policy
+      and how previously published estimates may be updated as new data becomes
+      available. Cross-references to related indicators and complementary data
+      sources are provided for users who need a more comprehensive picture.
+      Quality assurance procedures include validation checks against external
+      benchmarks, peer review of methodology, and regular audits of the data
+      processing pipeline. The indicator is aligned with international standards
+      and classifications, including those maintained by the United Nations
+      Statistical Commission and relevant specialized agencies. Historical data
+      may be subject to retroactive revisions when improved source data or
+      methods become available, and users should always refer to the most recent
+      release for the authoritative estimates. End of description.
+    unit: percent

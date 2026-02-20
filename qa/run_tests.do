@@ -42,6 +42,12 @@ foreach arg of local args {
 		di as text "  REG-06   fastread handles brackets/braces in values (BUG-6)"
 		di as text "  REG-07   early-exit does not double-close file handle (BUG-7)"
 		di as text "  REG-08   yaml list header with parent filter (BUG-8)"
+		di as text ""
+		di as text "  Feature Tests (v1.6.0):"
+		di as text "  FEAT-01  embedded double quotes via Mata st_sstore"
+		di as text "  FEAT-02  block scalar support in canonical parser"
+		di as text "  FEAT-03  continuation lines for multi-line scalars"
+		di as text "  FEAT-04  strL option prevents value truncation"
 		exit
 	}
 	else {
@@ -366,6 +372,66 @@ if "`target_test'" == "" | "`target_test'" == "REG-08" {
 	}
 	else {
 		test_fail, id("REG-08") msg("test_list_header.do failed (rc=`erc')")
+	}
+}
+
+*===============================================================================
+* FEATURE TESTS (v1.6.0)
+*===============================================================================
+
+* FEAT-01: embedded double quotes via Mata st_sstore
+if "`target_test'" == "" | "`target_test'" == "FEAT-01" {
+	test_start, id("FEAT-01") desc("embedded double quotes via Mata st_sstore")
+	capture quietly do "`qadir'/scripts/test_embedded_quotes.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-01")
+	}
+	else {
+		test_fail, id("FEAT-01") msg("test_embedded_quotes.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-02: block scalar support in canonical parser
+if "`target_test'" == "" | "`target_test'" == "FEAT-02" {
+	test_start, id("FEAT-02") desc("block scalar support in canonical parser")
+	capture quietly do "`qadir'/scripts/test_block_scalars.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-02")
+	}
+	else {
+		test_fail, id("FEAT-02") msg("test_block_scalars.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-03: continuation lines for multi-line scalars
+if "`target_test'" == "" | "`target_test'" == "FEAT-03" {
+	test_start, id("FEAT-03") desc("continuation lines for multi-line scalars")
+	capture quietly do "`qadir'/scripts/test_continuation_lines.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-03")
+	}
+	else {
+		test_fail, id("FEAT-03") msg("test_continuation_lines.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-04: strL option prevents value truncation
+if "`target_test'" == "" | "`target_test'" == "FEAT-04" {
+	test_start, id("FEAT-04") desc("strL option prevents value truncation")
+	capture quietly do "`qadir'/scripts/test_strl_option.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-04")
+	}
+	else {
+		test_fail, id("FEAT-04") msg("test_strl_option.do failed (rc=`erc')")
 	}
 }
 

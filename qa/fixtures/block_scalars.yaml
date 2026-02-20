@@ -1,0 +1,24 @@
+# Fixture: block scalars (|, >, |-, >-)
+# Tests block scalar parsing in canonical parser
+
+topics:
+  education:
+    name: Education
+    description: >
+      Education statistics cover enrollment,
+      completion, and learning outcomes
+      across all levels.
+    note: |
+      Line one of the note.
+      Line two of the note.
+      Line three of the note.
+
+  health:
+    name: Health
+    description: >-
+      Health statistics include
+      mortality, morbidity, and
+      nutrition indicators.
+    note: |-
+      First line.
+      Second line.
