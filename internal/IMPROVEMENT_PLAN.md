@@ -1,21 +1,85 @@
 # YAML Improvement Plan
 
-**Date:** 18Feb2026
+**Date:** 20Feb2026
 **Owner:** Joao Pedro Azevedo
-**Status:** All phases complete
-**Scope:** Bug fixes, consistency issues, and targeted enhancements identified during code review
+**Status:** Phase 2 complete; Phase 3 (downstream integration) planned
+**Current Version:** v1.7.0
+**Scope:** Bug fixes, consistency issues, performance enhancements, and downstream package integration
 
 ---
 
 ## 1. Summary
 
-This plan addresses bugs, version inconsistencies, and documentation mismatches
-found in the `yaml` package at v1.5.1. Items are ordered by severity: bugs first,
-then consistency fixes, then enhancements.
+This plan tracks the evolution of the `yaml` package from v1.5.1 bug fixes through
+v1.7.0 Phase 2 performance features, and plans for Phase 3 integration with
+downstream packages (`wbopendata` and `unicefdata`).
+
+**Completed:**
+- Phase 1: v1.5.1 bug fixes and consistency (8 bugs, 7 consistency fixes)
+- Phase 2: v1.7.0 Mata bulk parser, collapse mode, strL support
+
+**Planned:**
+- Phase 3: Replace custom YAML parsers in wbopendata/unicefdata with yaml v1.7.0
 
 ---
 
-## 2. Bugs
+## 2. Phase 2 Features (v1.6.0–v1.7.0) — COMPLETE
+
+### FEAT-1: Mata Bulk-Load Parser
+
+**Status:** Done (v1.6.0, `635264f`)
+**File:** `src/_/_yaml_mataread.ado`
+
+**Summary:** New `mataread` parser option that uses `st_sstore()` for vectorized
+row insertion. Bypasses macro expansion issues with embedded quotes and provides
+10–50× faster parsing for large files.
+
+**Usage:**
+```stata
+yaml read "file.yaml", clear parser(mataread)
+```
+
+---
+
+### FEAT-2: Collapse Post-Processor
+
+**Status:** Done (v1.7.0, `b261088`)
+**File:** `src/_/_yaml_collapse.ado`
+
+**Summary:** New `collapse` option that flattens hierarchical YAML to one-row-
+per-top-level-key format. Fields become columns. Designed for indicator catalogs.
+
+**Usage:**
+```stata
+yaml read "indicators.yaml", clear collapse
+```
+
+**Output:** Instead of key-value pairs, produces a wide dataset where each
+top-level key becomes a row and nested fields become variables.
+
+---
+
+### FEAT-3: strL Support
+
+**Status:** Done (v1.6.0, `635264f`)
+**Files:** `src/_/_yaml_mataread.ado`, `src/_/_yaml_collapse.ado`
+
+**Summary:** All value storage uses `strL` type to handle multi-kilobyte text
+fields (descriptions, notes) without truncation.
+
+---
+
+### FEAT-4: Block Scalars and Continuation Lines
+
+**Status:** Done (v1.6.0, `635264f`)
+**File:** `src/_/_yaml_mataread.ado`
+
+**Summary:** Correct handling of YAML block scalars (`|`, `>`) and continuation
+lines. Multi-line values are accumulated and stored as single strL values.
+
+---
+
+## 3. Phase 1 Bugs (v1.5.1) — COMPLETE
 
 ### BUG-4: `yaml_write` outputs flattened keys instead of YAML hierarchy
 
@@ -263,36 +327,173 @@ values including nested keys and list items.
 
 ## 7. Priority & Sequencing
 
-| Phase | Items | Rationale |
-| ----- | ----- | --------- |
-| **Phase 1: Critical fixes** | ~~BUG-4, BUG-5, BUG-6, BUG-7~~ | Done |
-| **Phase 2: Consistency** | ~~CON-1, CON-2, CON-3, CON-4, CON-5, CON-6, HYG-1~~ | Done |
-| **Phase 3: Low-severity bugs** | ~~BUG-8, BUG-9~~ | Done |
-| **Phase 4: Robustness** | ~~HYG-2, ROB-1~~ | Done |
-| **Phase 5: Packaging** | ~~CON-7~~ | Done |
-| **Phase 6: QA** | ~~QA-1, QA-2~~ | Done |
+| Phase | Items | Status |
+| ----- | ----- | ------ |
+| **Phase 1: v1.5.1 fixes** | BUG-4 to BUG-9, CON-1 to CON-7 | ✅ Done |
+| **Phase 2: v1.7.0 performance** | FEAT-1 to FEAT-4 (Mata, collapse, strL) | ✅ Done |
+| **Phase 3: Downstream integration** | INT-1 to INT-4 (wbopendata, unicefdata) | 🔄 Planned |
 
-### Commit Log
+### Phase 2 Commit Log (v1.6.0–v1.7.0)
 
 | Commit | Type | Scope |
 | ------ | ---- | ----- |
-| `8456e69` | fix | yaml_write rewrite (BUG-4, HYG-2) |
-| `f782545` | fix | yaml_validate type check (BUG-5) |
-| `efd6130` | fix | fastread bracket/brace (BUG-6) |
-| `fa780fb` | fix | yaml_read double close + return values (BUG-7, BUG-9) |
-| `f8e1c25` | fix | yaml_list header display (BUG-8) |
-| `9451831` | fix | yaml_dir return values (CON-2) |
-| `7b3b8b8` | chore | Version headers to v1.5.1 (CON-1) |
-| `f87aa35` | refactor | Remove _yaml_pop_parents (HYG-1) |
-| `b11f2f6` | docs | README fixes (CON-3, CON-4, CON-5, CON-6) |
-| `5cc4f77` | docs | Add improvement plan |
+| `635264f` | feat | v1.6.0: st_sstore, strL, block scalars |
+| `b261088` | feat | Mata bulk-load and collapse post-processor |
+| `77a9805` | chore | Bump version to v1.7.0 |
+| `0fd554f` | fix | Paper citation updates |
 
 ---
 
-## 8. Out of Scope
+## 8. Phase 3: Downstream Integration — PLANNED
 
-The following are tracked in existing plans and not duplicated here:
+### INT-1: wbopendata Integration
 
-- Architecture refactor to shared `yaml_utils.ado` (see `doc/plans/YAML_ARCH_REFACTOR_PLAN.md`)
-- Further fastread performance work (see `doc/plans/YAML_FAST_SCAN_PLAN.md`)
-- New YAML features (anchors, flow collections, multi-document)
+**Status:** Planned
+**Branch:** `feat/yaml-v1.7-integration` (off `develop`)
+**Target Files:**
+- `src/_/__wbod_parse_yaml_ind.ado` (238 lines) → Replace with yaml v1.7.0
+
+**Current State:**
+
+wbopendata has a custom YAML parser (`__wbod_parse_yaml_ind.ado`) that:
+- Reads `_wbopendata_indicators.yaml` (17.7 MB, 418,462 lines, ~29,000 indicators)
+- Uses `st_sstore()` for Mata-based row insertion
+- Outputs one row per indicator with fields as columns
+- Handles block scalars, list items, YAML formatting
+
+**Migration Plan:**
+
+1. **Add yaml dependency** to `wbopendata.pkg`:
+   ```
+   d yaml v1.7.0
+   ```
+
+2. **Replace parser call** in `__wbopendata_search_cache.ado`:
+   ```stata
+   * Before:
+   __wbod_parse_yaml_ind "`yaml_path'"
+   
+   * After:
+   yaml read "`yaml_path'", clear collapse parser(mataread)
+   ```
+
+3. **Field mapping** — Verify column names match:
+   | yaml collapse output | wbopendata expected |
+   |---------------------|---------------------|
+   | `_key` | `ind_code` |
+   | `code` | `code` |
+   | `name` | `name` |
+   | `source_id` | `source_id` |
+   | `description` | `description` |
+
+4. **Rename `_key` to `ind_code`**:
+   ```stata
+   rename _key ind_code
+   ```
+
+5. **Delete `__wbod_parse_yaml_ind.ado`** after validation
+
+6. **Run test suite** (89 tests) to verify parity
+
+**Lines of Code Impact:**
+- Delete: 238 lines (`__wbod_parse_yaml_ind.ado`)
+- Add: ~5 lines (yaml read + rename)
+
+---
+
+### INT-2: unicefdata Integration
+
+**Status:** Planned
+**Branch:** `feat/yaml-v1.7-integration` (off `develop`)
+**Target Files:**
+- `stata/src/_/__unicef_parse_indicators_yaml.ado` (270 lines) → Replace
+- `stata/src/_/__unicef_parse_indicator_yaml.ado` → Review
+
+**Current State:**
+
+unicefdata has a custom YAML parser (`__unicef_parse_indicators_yaml.ado`) that:
+- Reads `_unicefdata_indicators.yaml` (294 KB, 9,674 lines, ~800 indicators)
+- Mirrors wbopendata's parser design (documented as "Reference: __wbod_parse_yaml_ind.ado")
+- Uses `st_sstore()` for Mata-based row insertion
+- Outputs one row per indicator
+
+**Migration Plan:**
+
+1. **Add yaml dependency** to `unicefdata.pkg`
+
+2. **Replace parser call** in `_unicef_load_indicators_cache.ado`:
+   ```stata
+   yaml read "`yaml_path'", clear collapse parser(mataread)
+   rename _key ind_code
+   ```
+
+3. **Field mapping** — unicefdata fields:
+   | Field | Description |
+   |-------|-------------|
+   | `code` | Indicator code |
+   | `name` | Indicator name |
+   | `urn` | URN identifier |
+   | `parent` | Parent indicator |
+   | `tier` | Data tier |
+   | `dataflows` | Associated dataflows |
+
+4. **Delete `__unicef_parse_indicators_yaml.ado`** after validation
+
+5. **Run test suite** (443 tests) to verify parity
+
+**Lines of Code Impact:**
+- Delete: 270 lines (`__unicef_parse_indicators_yaml.ado`)
+- Add: ~5 lines
+
+---
+
+### INT-3: Shared yaml Dependency Management
+
+**Status:** Planned
+
+**Problem:** Both packages need yaml v1.7.0 as a dependency. Need to ensure:
+- yaml is installed before wbopendata/unicefdata
+- Version compatibility check
+
+**Options:**
+
+A. **SSC dependency** — yaml is on SSC, add `ssc install yaml` check
+B. **Bundled copy** — Include yaml source in each package (duplication)
+C. **net install check** — Check for yaml, prompt user if missing
+
+**Recommendation:** Option A with graceful fallback:
+```stata
+capture which yaml
+if _rc {
+    di as error "yaml package required. Install with: ssc install yaml"
+    exit 198
+}
+```
+
+---
+
+### INT-4: Performance Validation
+
+**Status:** Planned
+
+**Benchmarks to Run:**
+
+| Test | File | Current Parser | yaml v1.7.0 |
+|------|------|----------------|-------------|
+| wbopendata indicators | 17.7 MB | TBD | TBD |
+| unicefdata indicators | 294 KB | TBD | TBD |
+
+**Success Criteria:**
+- yaml v1.7.0 performs within 20% of custom parsers
+- All existing tests pass
+- No regression in field values
+
+---
+
+## 9. Out of Scope
+
+The following are tracked separately:
+
+- Advanced YAML features (anchors, flow collections, multi-document)
+- yaml_write for wbopendata/unicefdata metadata generation
+- Python/R parity for YAML parsing
