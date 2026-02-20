@@ -77,3 +77,107 @@ Skipped:   0
 Result:    ALL TESTS PASSED
 Log:       run_tests.log
 ======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   19:25:17
+Ended:     19:25:20
+Duration:  0m 3s
+Branch:    feat/yaml-v2-convergence
+Version:   1.5.1
+Stata:     17
+Tests:     14 run, 14 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   20:19:44
+Ended:     20:19:50
+Duration:  0m 6s
+Branch:    feat/yaml-v2-convergence
+Version:   1.5.1
+Stata:     17
+Tests:     18 run, 15 passed, 3 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-02 FEAT-03 FEAT-04
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   20:23:59
+Ended:     20:24:02
+Duration:  0m 3s
+Branch:    feat/yaml-v2-convergence
+Version:   1.5.1
+Stata:     17
+Tests:     20 run, 17 passed, 3 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-02 FEAT-03 FEAT-04
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   20:35:59
+Ended:     20:36:03
+Duration:  0m 4s
+Branch:    feat/yaml-v2-convergence
+Version:   1.5.1
+Stata:     17
+Tests:     20 run, 19 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-04
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   20:52:19
+Ended:     20:52:22
+Duration:  0m 3s
+Branch:    feat/yaml-v2-convergence
+Version:   1.5.1
+Stata:     17
+Tests:     20 run, 19 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-04
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   20:59:20
+Ended:     21:00:21
+Duration:  1m 1s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   21:47:16
+Ended:     21:48:38
+Duration:  1m 22s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
