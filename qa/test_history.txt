@@ -181,3 +181,194 @@ Result:    FAILED
 Failed:     FEAT-07
 Log:       run_tests.log
 ======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   21:53:10
+Ended:     21:53:54
+Duration:  0m 44s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   22:29:14
+Ended:     22:30:16
+Duration:  1m 2s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  19 Feb 2026
+Started:   22:31:46
+Ended:     22:33:24
+Duration:  1m 38s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   04:48:58
+Ended:     04:49:42
+Duration:  0m 44s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-07
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   05:02:54
+Ended:     05:03:57
+Duration:  1m 3s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 21 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   05:20:36
+Ended:     05:21:49
+Duration:  1m 13s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-06
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   06:03:56
+Ended:     06:05:06
+Duration:  1m 10s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 21 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   07:15:58
+Ended:     07:17:48
+Duration:  1m 50s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 21 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   08:57:37
+Ended:     08:58:42
+Duration:  1m 5s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-06
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   09:02:48
+Ended:     09:04:09
+Duration:  1m 21s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-06
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   09:56:24
+Ended:     09:57:44
+Duration:  1m 20s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-06
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   10:03:20
+Ended:     10:05:01
+Duration:  1m 41s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 20 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     FEAT-06
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   10:30:50
+Ended:     10:32:17
+Duration:  1m 27s
+Branch:    feat/yaml-v2-convergence
+Version:   1.7.0
+Stata:     17
+Tests:     21 run, 21 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
