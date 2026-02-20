@@ -39,29 +39,25 @@ if (r(N) != 3) {
 
 *===============================================================================
 * TEST: Output should have named columns from YAML fields
+* Note: _yaml_collapse sanitizes field names to lowercase Stata-valid names
 *===============================================================================
 
 * Check that key columns exist
 capture confirm variable ind_code
 if (_rc != 0) {
-    * Try alternative column name
-    capture confirm variable key
-    if (_rc != 0) {
-        di as error "FEAT-06 FAIL: no indicator code column found (ind_code or key)"
-        local all_pass = 0
-    }
+    di as error "FEAT-06 FAIL: no indicator code column found (ind_code)"
+    ds
+    local all_pass = 0
 }
 
 * Check that field columns exist (name, unit, source_id, description)
+* These are already valid lowercase names, so no transformation expected
 foreach col in name unit source_id description {
     capture confirm variable `col'
     if (_rc != 0) {
-        * Try prefixed version
-        capture confirm variable field_`col'
-        if (_rc != 0) {
-            di as error "FEAT-06 FAIL: field column '`col'' (or 'field_`col'') not found"
-            local all_pass = 0
-        }
+        di as error "FEAT-06 FAIL: field column '`col'' not found"
+        ds
+        local all_pass = 0
     }
 }
 
@@ -69,49 +65,23 @@ foreach col in name unit source_id description {
 * TEST: Values should be correct
 *===============================================================================
 
-* Find the name column (could be 'name' or 'field_name')
-local namecol ""
-capture confirm variable name
-if (_rc == 0) local namecol "name"
-else {
-    capture confirm variable field_name
-    if (_rc == 0) local namecol "field_name"
-}
-
-if ("`namecol'" != "") {
-    * Check that SP_POP_TOTL has correct name
-    capture confirm variable ind_code
-    if (_rc == 0) {
-        qui count if ind_code == "SP_POP_TOTL" & `namecol' == "Population total"
-    }
-    else {
-        qui count if key == "SP_POP_TOTL" & `namecol' == "Population total"
-    }
-    if (r(N) != 1) {
-        di as error "FEAT-06 FAIL: SP_POP_TOTL name mismatch"
-        local all_pass = 0
-    }
+* Check that SP_POP_TOTL has correct name
+qui count if ind_code == "SP_POP_TOTL" & name == "Population total"
+if (r(N) != 1) {
+    di as error "FEAT-06 FAIL: SP_POP_TOTL name mismatch"
+    list ind_code name if ind_code == "SP_POP_TOTL"
+    local all_pass = 0
 }
 
 *===============================================================================
 * TEST: Block scalar descriptions should be folded into single values
 *===============================================================================
 
-local desccol ""
-capture confirm variable description
-if (_rc == 0) local desccol "description"
-else {
-    capture confirm variable field_description
-    if (_rc == 0) local desccol "field_description"
-}
-
-if ("`desccol'" != "") {
-    qui levelsof `desccol' if inlist(ind_code, "SP_POP_TOTL") | ///
-        inlist(key, "SP_POP_TOTL"), local(v) clean
-    if (strpos(`"`v'"', "de facto") == 0) {
-        di as error "FEAT-06 FAIL: collapsed description missing expected text"
-        local all_pass = 0
-    }
+qui levelsof description if ind_code == "SP_POP_TOTL", local(v) clean
+if (strpos(`"`v'"', "de facto") == 0) {
+    di as error "FEAT-06 FAIL: collapsed description missing expected text"
+    list ind_code description if ind_code == "SP_POP_TOTL"
+    local all_pass = 0
 }
 
 *===============================================================================
