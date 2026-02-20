@@ -71,6 +71,9 @@ local histfile "`qadir'/test_history.txt"
 adopath ++ "`root'/src/y"
 adopath ++ "`root'/src/_"
 
+* Ensure fixtures are extracted from fixtures.zip
+qui do "`qadir'/_unpack_fixtures.do"
+
 cap log close _testlog
 cap log using "`logfile'", replace text name(_testlog)
 if _rc != 0 {
