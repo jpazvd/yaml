@@ -22,10 +22,14 @@ void _yaml_mata_parse(string scalar filepath,
     string scalar parent_stack, last_key, item_value
     string scalar block_style, block_val, next_line, next_trim
     real scalar next_indent, block_indent
+    real scalar found_level, lv
+    string scalar fc, lc
 
     /* Result vectors (pre-allocated, doubled on overflow) */
     string colvector r_keys, r_values, r_parents, r_types
     real colvector r_levels
+    real colvector indent_stack
+    string colvector parent_names
 
     capacity = 50000
     n = 0
@@ -37,8 +41,6 @@ void _yaml_mata_parse(string scalar filepath,
 
     /* Parent/indent stack (indexed by level) */
     max_depth = 100
-    real colvector indent_stack
-    string colvector parent_names
     indent_stack = J(max_depth, 1, 0)
     parent_names = J(max_depth, 1, "")
 
@@ -90,7 +92,6 @@ void _yaml_mata_parse(string scalar filepath,
             parent_names[n_levels] = parent_stack
         }
         else if (indent < current_indent) {
-            real scalar found_level, lv
             found_level = 1
             for (lv = n_levels; lv >= 1; lv--) {
                 if (indent_stack[lv] == indent) {
@@ -132,7 +133,6 @@ void _yaml_mata_parse(string scalar filepath,
 
             /* Remove quotes from list item value */
             if (strlen(value) >= 2) {
-                string scalar fc, lc
                 fc = substr(value, 1, 1)
                 lc = substr(value, strlen(value), 1)
                 if ((fc == `"""' & lc == `"""') | (fc == "'" & lc == "'")) {
