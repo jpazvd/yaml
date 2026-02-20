@@ -89,7 +89,8 @@ void _yaml_mata_parse(string scalar filepath,
                 _error("YAML nesting exceeds maximum depth (100)")
             }
             indent_stack[n_levels] = indent
-            parent_names[n_levels] = parent_stack
+            parent_stack = last_key   /* Update to new parent when going deeper */
+            parent_names[n_levels] = parent_stack  /* Store for backtracking */
         }
         else if (indent < current_indent) {
             found_level = 1
@@ -246,10 +247,10 @@ void _yaml_mata_parse(string scalar filepath,
                     full_key = parent_stack + "_" + key
                 }
 
-                /* Clean key name */
+                /* Clean key name (spaces only - dots/hyphens preserved for entity codes) */
                 full_key = subinstr(full_key, " ", "_")
-                full_key = subinstr(full_key, "-", "_")
-                full_key = subinstr(full_key, ".", "_")
+                /* Note: dots and hyphens NOT transformed here - ind_code preserves original format.
+                   Field names are sanitized in _yaml_collapse via _yaml_safe_varname(). */
 
                 /* Determine type */
                 this_parent = parent_stack
