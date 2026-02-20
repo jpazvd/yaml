@@ -51,6 +51,7 @@ foreach arg of local args {
 		di as text "  FEAT-05  Mata bulk-load produces correct output (Phase 2)"
 		di as text "  FEAT-06  collapse option produces wide-format output (Phase 2)"
 		di as text "  FEAT-07  Performance comparison across parser modes (Phase 2)"
+		di as text "  FEAT-08  Frame-based query operations (wbopendata-style)"
 		exit
 	}
 	else {
@@ -480,6 +481,25 @@ if "`target_test'" == "" | "`target_test'" == "FEAT-07" {
 	}
 	else {
 		test_fail, id("FEAT-07") msg("test_timing.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-08: Frame-based query operations (wbopendata-style)
+if "`target_test'" == "" | "`target_test'" == "FEAT-08" {
+	test_start, id("FEAT-08") desc("Frame-based query operations")
+	if `c(stata_version)' >= 16 {
+		capture quietly do "`qadir'/scripts/test_frame_queries.do"
+		local erc = _rc
+		qui do "`qadir'/_define_helpers.do"
+		if `erc' == 0 {
+			test_pass, id("FEAT-08")
+		}
+		else {
+			test_fail, id("FEAT-08") msg("test_frame_queries.do failed (rc=`erc')")
+		}
+	}
+	else {
+		test_skip, id("FEAT-08") msg("requires Stata 16+ (frames)")
 	}
 }
 
