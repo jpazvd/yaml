@@ -1,7 +1,8 @@
 *******************************************************************************
 * yaml_read
-*! v 1.6.0   19Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.7.0   19Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
+* v1.7.0: Mata bulk-load (BULK), collapsed wide-format output (COLLAPSE)
 * v1.6.0: Mata st_sstore for embedded quote safety, strL option,
 *         block scalar support in canonical parser, continuation lines
 *******************************************************************************
@@ -11,7 +12,8 @@ program define yaml_read, rclass
     
     syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
         FASTREAD FIELDS(string) LISTKEYS(string) CACHE(string) ///
-        TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string) STRL]
+        TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string) STRL ///
+        BULK COLLAPSE]
     
     * Validate option combinations
     if ("`fastread'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
@@ -36,6 +38,22 @@ program define yaml_read, rclass
     }
     if ("`earlyexit'" != "" & "`targets'" == "") {
         di as err "earlyexit requires targets()"
+        exit 198
+    }
+    if ("`bulk'" != "" & "`fastread'" != "") {
+        di as err "bulk is not compatible with fastread"
+        exit 198
+    }
+    if ("`bulk'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
+        di as err "bulk is not compatible with locals/scalars"
+        exit 198
+    }
+    if ("`collapse'" != "" & "`fastread'" != "") {
+        di as err "collapse is not compatible with fastread"
+        exit 198
+    }
+    if ("`collapse'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
+        di as err "collapse is not compatible with locals/scalars"
         exit 198
     }
     if ("`fields'" != "") {
@@ -222,13 +240,13 @@ program define yaml_read, rclass
             if ("`fastread'" != "") {
                 gen str244 key = ""
                 gen str244 field = ""
-                gen str2000 value = ""
+                gen `val_type' value = ""
                 gen byte list = .
                 gen long line = .
             }
             else {
                 gen str244 key = ""
-                gen str2000 value = ""
+                gen `val_type' value = ""
                 gen int level = .
                 gen str244 parent = ""
                 gen str32 type = ""
@@ -237,6 +255,70 @@ program define yaml_read, rclass
         * Set characteristic to track YAML source
         char _dta[yaml_source] "`using'"
         local use_frame = 0
+    }
+
+    * Bulk (Mata) path (opt-in)
+    if ("`bulk'" != "" & `skip_parse' == 0) {
+        if (`use_frame' == 1) {
+            frame `frame' {
+                _yaml_mataread using "`using'", `blockscalars'
+            }
+        }
+        else {
+            _yaml_mataread using "`using'", `blockscalars'
+        }
+
+        * Post-process: clean up and label
+        if (`use_frame' == 1) {
+            frame `frame' {
+                qui drop if key == ""
+                qui compress
+                label variable key "YAML key name"
+                label variable value "YAML value"
+                label variable level "Nesting level (1=root)"
+                label variable parent "Parent key"
+                label variable type "Value type"
+                if ("`collapse'" != "") {
+                    _yaml_collapse
+                }
+            }
+        }
+        else {
+            qui drop if key == ""
+            qui compress
+            label variable key "YAML key name"
+            label variable value "YAML value"
+            label variable level "Nesting level (1=root)"
+            label variable parent "Parent key"
+            label variable type "Value type"
+            if ("`collapse'" != "") {
+                _yaml_collapse
+            }
+        }
+
+        * Cache bulk results if requested
+        if ("`cache_frame'" != "") {
+            if (`use_frame' == 1) {
+                if ("`frame'" != "`cache_frame'") {
+                    capture frame drop `cache_frame'
+                    frame copy `frame' `cache_frame', replace
+                }
+            }
+            else {
+                capture frame drop `cache_frame'
+                frame put *, into(`cache_frame')
+            }
+            frame `cache_frame' {
+                char _dta[yaml_source] "`using'"
+                char _dta[yaml_checksum] "`file_hash'"
+                char _dta[yaml_mode] "bulk"
+            }
+        }
+
+        return local filename "`using'"
+        return local yaml_mode "bulk"
+        return scalar cache_hit = 0
+        exit 0
     }
 
     * Fast-read path (opt-in)
@@ -737,36 +819,44 @@ program define yaml_read, rclass
         frame `frame' {
             qui drop if key == ""
             qui compress
-            
+
             * Add variable labels
             label variable key "YAML key name"
             label variable value "YAML value"
             label variable level "Nesting level (1=root)"
             label variable parent "Parent key"
             label variable type "Value type"
+
+            if ("`collapse'" != "") {
+                _yaml_collapse
+            }
         }
-        
+
         if ("`verbose'" != "") {
             frame `frame' {
                 di as text ""
                 di as text "Loaded " as result _N as text " key-value pairs into frame " as result "`frame'" as text "."
             }
         }
-        
+
         return local frame "`frame'"
     }
     else {
         * Clean up current dataset (default)
         qui drop if key == ""
         qui compress
-        
+
         * Add variable labels
         label variable key "YAML key name"
         label variable value "YAML value"
         label variable level "Nesting level (1=root)"
         label variable parent "Parent key"
         label variable type "Value type"
-        
+
+        if ("`collapse'" != "") {
+            _yaml_collapse
+        }
+
         if ("`verbose'" != "") {
             di as text ""
             di as text "Loaded " as result _N as text " key-value pairs into dataset."
