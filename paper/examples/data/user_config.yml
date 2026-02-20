@@ -1,0 +1,10 @@
+# User-specific paths configuration
+# Used in Stata Journal article: Section 5.7
+
+analyst1:
+  githubFolder: "D:/Users/analyst1/GitHub"
+  teamsRoot: "C:/Users/analyst1/TeamsRoot"
+
+analyst2:
+  githubFolder: "C:/Users/analyst2/Projects/GitHub"
+  teamsRoot: "C:/Users/analyst2/Shared/TeamsRoot"

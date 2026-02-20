@@ -33,12 +33,13 @@ set more off
 set linesize 80
 cap log close
 
-* Set working directory
-cap: cd "D:\jazevedo\GitHub\ados\yaml"
-cap: cd "cd C:\GitHub\yaml\"
+* Set working directory (portable: works from any clone location)
+* Override below if your repo root differs
+local reporoot "`c(pwd)'"
+cap: cd "`reporoot'"
 
 * Load the yaml command
-run "src/y/yaml.ado"
+run "`reporoot'/src/y/yaml.ado"
 
 * Start log
 log using "examples/yaml_sj_article_examples.log", replace text

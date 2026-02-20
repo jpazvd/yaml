@@ -11,15 +11,30 @@ clear all
 set more off
 set linesize 80
 cap log close
+discard
 
-* Set working directory to the yaml repository root
-cd "D:\jazevedo\GitHub\ados\yaml"
+* Resolve repository root
+local pwd = c(pwd)
+local base ""
+if (fileexists("`pwd'/src/y/yaml.ado")) {
+    local base "`pwd'"
+}
+else if (fileexists("`pwd'/../src/y/yaml.ado")) {
+    local base "`pwd'/.."
+}
+else {
+    di as err "Cannot locate src/y/yaml.ado from: `pwd'"
+    exit 601
+}
 
-* Load the yaml command from src/y/
-run "src/y/yaml.ado"
+* Add yaml ado paths
+adopath ++ "`base'/src/y"
+adopath ++ "`base'/src/_"
+capture program drop yaml
+run "`base'/src/y/yaml.ado"
 
 * Start log file (will be saved in the examples folder)
-log using "examples/yaml_basic_examples.log", replace text
+log using "`base'/examples/yaml_basic_examples.log", replace text
 
 * Display header
 display _n
@@ -32,7 +47,7 @@ display as text "Working directory: " c(pwd)
 display _n
 
 * Data files are in examples/data/
-local datadir "examples/data"
+local datadir "`base'/examples/data"
 
 * ==============================================================================
 * SECTION: yaml read
@@ -57,6 +72,14 @@ capture {
 if _rc {
     display as error "Frame support requires Stata 16+"
 }
+
+* Example 3: Fast-read for large metadata (opt-in)
+display as text "--- Fast-read fastread_indicators.yaml (fields + listkeys + cache) ---"
+yaml read using "`datadir'/fastread_indicators.yaml", replace fastread ///
+    fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
+list, clean noobs
+display _n
 
 * ==============================================================================
 * SECTION: yaml describe

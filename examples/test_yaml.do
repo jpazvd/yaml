@@ -4,9 +4,13 @@
 * Frame option: requires explicit frame(name) - Stata 16+ only
 clear all
 set more off
+discard
 
 * Add ado path (parent directory contains src/y/)
 adopath + "../src/y"
+adopath + "../src/_"
+capture program drop yaml
+run "../src/y/yaml.ado"
 
 di as text "{hline 70}"
 di as text "{bf:TEST 1: Read YAML into current dataset (default)}"
@@ -17,6 +21,34 @@ yaml read using "data/test_config.yaml", replace verbose
 di as text ""
 di as text "Dataset contents:"
 list in 1/10, clean noobs
+
+di as text ""
+di as text "{hline 70}"
+di as text "{bf:TEST 1b: Fast-read read with fields/listkeys + cache}"
+di as text "{hline 70}"
+
+capture noisily yaml read using "data/fastread_indicators.yaml", fastread replace ///
+    fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
+
+local fastread_ok = (_rc == 0)
+if (`fastread_ok') {
+    di as text "Fast-read output (first 5 rows):"
+    list in 1/5, clean noobs
+
+    capture noisily yaml read using "data/fastread_indicators.yaml", fastread replace ///
+        fields(name description source_id topic_ids) ///
+        listkeys(topic_ids topic_names) cache(ind_cache)
+    if (_rc == 0) {
+        di as text "Cache hit (expect 1): " r(cache_hit)
+    }
+    else {
+        di as error "Fast-read cache test failed (r(`=_rc'))"
+    }
+}
+else {
+    di as error "Fast-read test skipped (r(`=_rc'))"
+}
 
 di as text ""
 di as text "{hline 70}"

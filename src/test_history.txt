@@ -1,0 +1,13 @@
+=== yaml Test History ===
+Created: 18 Feb 2026
+
+
+======================================================================
+Test Run: 19 Feb 2026
+Version:  1.5.1
+Build:    18Feb2026
+Stata:    16+
+Tests:    See qa/run_tests.do for full test suite
+Status:   All regression tests (REG-01 through REG-08) passing
+Result:   PASSED
+======================================================================

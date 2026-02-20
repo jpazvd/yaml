@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.3.1 with production-tested optimization patterns for large metadata catalogs (700+ entries) achieving 50× performance improvement through vectorized frame-based queries.
+**Latest:** v1.7.0 with Mata bulk-load parser, collapsed wide-format output, and frame-based query operations.
 
 ### Key Features
 
@@ -19,6 +19,13 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Query values** using hierarchical key paths
 - **Validate configurations** with required keys and type checking
 - **Multiple frame support** (Stata 16+) for managing multiple configurations
+- **Fast-scan mode** for large metadata catalogs (opt-in)
+- **Field-selective extraction** with `fields()`
+- **List block extraction** with `listkeys()` (fast-read)
+- **Frame caching** with `cache()` (Stata 16+)
+- **Mata bulk parser** for high-performance parsing (Phase 2)
+- **Collapse option** for wide-format indicator output (Phase 2)
+- **strL support** for values exceeding 2045 characters
 
 ## Installation
 
@@ -55,6 +62,10 @@ yaml validate, required(name version database)
 
 * Write modified configuration
 yaml write using output.yaml, replace
+
+* Speed-first metadata read (fastread)
+yaml read using indicators.yaml, fastread fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
 ```
 
 ## Architecture
@@ -119,6 +130,22 @@ yaml read using filename.yaml [, options]
 - `scalars` - Store numeric values as scalars
 - `prefix(string)` - Prefix for local/scalar names (default: `yaml_`)
 - `verbose` - Display parsing details
+- `fastread` - Speed-first parsing for large, regular YAML
+- `fields(string)` - Restrict extraction to specific keys
+- `listkeys(string)` - Extract list blocks for specified keys (fastread only)
+- `blockscalars` - Capture block scalars in fast-read mode
+- `targets(string)` - Early-exit targets for canonical parse (exact keys)
+- `earlyexit` - Stop parsing once all targets are found (canonical)
+- `stream` - Use streaming tokenization for canonical parse
+- `index(string)` - Materialize an index frame for repeated queries (Stata 16+)
+- `cache(string)` - Cache parsed results in a frame (Stata 16+)
+- `bulk` - Use Mata bulk-load parser for high-performance parsing (Phase 2)
+- `collapse` - Produce wide-format output with `_yaml_collapse` (Phase 2)
+- `strl` - Use strL storage for values exceeding 2045 characters
+
+## What's New
+
+See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ### yaml write
 
@@ -224,7 +251,7 @@ Lists only YAML frames in memory. Requires Stata 16+.
 ### yaml clear
 
 ```stata
-yaml clear [, all frame(name)]
+yaml clear [framename] [, all]
 ```
 
 ## Data Model
@@ -237,9 +264,21 @@ YAML data is stored in a flat dataset with hierarchical references:
 |--------|------|-------------|
 | `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
 | `value` | str2000 | The value associated with the key |
-| `level` | int | Nesting depth (0 = root level) |
+| `level` | int | Nesting depth (1 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
+
+### Fast-Read Output Schema
+
+In `fastread` mode, the output is row-wise and minimal:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | str244 | Top-level key (e.g., indicator code) |
+| `field` | str244 | Field name under the key |
+| `value` | str2000 | Field value |
+| `list` | byte | 1 if list item, 0 otherwise |
+| `line` | long | Line number in the YAML file |
 
 ### Key Naming Convention
 
@@ -448,9 +487,17 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.3.1)
+│   ├── yaml.ado           # Main command (v1.7.0)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
+├── src/_/
+│   ├── _yaml_mataread.ado # Mata bulk-load parser (Phase 2)
+│   └── _yaml_collapse.ado # Wide-format collapse helper (Phase 2)
+├── qa/
+│   ├── run_tests.do       # QA runner (22 tests)
+│   ├── README.md          # QA framework documentation
+│   ├── scripts/           # Test scripts (20 files)
+│   └── fixtures/          # Test fixtures
 ├── examples/              # Examples and test files
 │   ├── README.md
 │   ├── yaml_sj_article_examples.do   # Stata Journal article examples

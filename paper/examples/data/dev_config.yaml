@@ -1,0 +1,23 @@
+# Development environment configuration
+# Used in Stata Journal article examples for multi-file comparison
+
+environment: development
+version: 1.0.0
+
+database:
+  host: localhost
+  port: 5432
+  name: dev_analytics
+  user: dev_user
+  
+api:
+  endpoint: http://localhost:8080/api
+  timeout: 10
+  
+logging:
+  level: debug
+  file: ./logs/dev.log
+  
+features:
+  cache_enabled: false
+  debug_mode: true
