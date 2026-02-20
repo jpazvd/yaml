@@ -2,7 +2,7 @@
 
 **Date:** 20Feb2026
 **Owner:** Joao Pedro Azevedo
-**Status:** Phase 2 complete; Phase 3 (downstream integration) planned
+**Status:** Phase 2 complete; Phase 3 (downstream integration) in progress
 **Current Version:** v1.7.0
 **Scope:** Bug fixes, consistency issues, performance enhancements, and downstream package integration
 
@@ -18,8 +18,9 @@ downstream packages (`wbopendata` and `unicefdata`).
 - Phase 1: v1.5.1 bug fixes and consistency (8 bugs, 7 consistency fixes)
 - Phase 2: v1.7.0 Mata bulk parser, collapse mode, strL support
 
-**Planned:**
-- Phase 3: Replace custom YAML parsers in wbopendata/unicefdata with yaml v1.7.0
+**In Progress:**
+- Phase 3 (wbopendata): yaml v1.7.0 bundled; custom indicators parser retained due to collapse limitations
+- Phase 3 (unicefdata): Planned (next step)
 
 ---
 
@@ -331,7 +332,8 @@ values including nested keys and list items.
 | ----- | ----- | ------ |
 | **Phase 1: v1.5.1 fixes** | BUG-4 to BUG-9, CON-1 to CON-7 | ✅ Done |
 | **Phase 2: v1.7.0 performance** | FEAT-1 to FEAT-4 (Mata, collapse, strL) | ✅ Done |
-| **Phase 3: Downstream integration** | INT-1 to INT-4 (wbopendata, unicefdata) | 🔄 Planned |
+| **Phase 3: Downstream integration** | INT-1 (wbopendata): bundled, parser retained | 🔄 Partial |
+| **Phase 3: Downstream integration** | INT-2 (unicefdata): planned | 📋 Planned |
 
 ### Phase 2 Commit Log (v1.6.0–v1.7.0)
 
@@ -344,70 +346,55 @@ values including nested keys and list items.
 
 ---
 
-## 8. Phase 3: Downstream Integration — PLANNED
+## 8. Phase 3: Downstream Integration — IN PROGRESS
 
 ### INT-1: wbopendata Integration
 
-**Status:** Planned
-**Branch:** `feat/yaml-v1.7-integration` (off `develop`)
-**Target Files:**
-- `src/_/__wbod_parse_yaml_ind.ado` (238 lines) → Replace with yaml v1.7.0
+**Status:** Partial (yaml bundled, parser retained)
+**Branch:** `feat/yaml-convergence` (has yaml v1.7.0 bundled)
+**Commit:** `6a364d08` — feat(yaml): update bundled yaml package to v1.7.0
 
 **Current State:**
 
-wbopendata has a custom YAML parser (`__wbod_parse_yaml_ind.ado`) that:
-- Reads `_wbopendata_indicators.yaml` (17.7 MB, 418,462 lines, ~29,000 indicators)
-- Uses `st_sstore()` for Mata-based row insertion
-- Outputs one row per indicator with fields as columns
-- Handles block scalars, list items, YAML formatting
+wbopendata has yaml v1.7.0 bundled but retains its custom YAML parser for indicators:
 
-**Migration Plan:**
+1. **yaml v1.7.0 bundled** ✓ — All 14 ado files + 3 sthlp files copied to `src/y/` and `src/_/`
 
-1. **Add yaml dependency** to `wbopendata.pkg`:
-   ```
-   d yaml v1.7.0
-   ```
+2. **Custom parser retained** — `__wbod_parse_yaml_ind.ado` (238 lines) still used because:
+   - The `collapse` post-processor produces path-based column names (989 columns)
+   - Nested YAML structures create columns like `unit_source_org` instead of separate `unit`, `source_org`
+   - The simple column mapping expected by wbopendata isn't achievable with current collapse
 
-2. **Replace parser call** in `__wbopendata_search_cache.ado`:
-   ```stata
-   * Before:
-   __wbod_parse_yaml_ind "`yaml_path'"
-   
-   * After:
-   yaml read "`yaml_path'", clear collapse parser(mataread)
-   ```
+3. **yaml v1.7.0 available** for simpler YAML files:
+   - `_wbopendata_parameters.yaml` — Can use `yaml read`
+   - `_wbopendata_sources.yaml` — Can use `yaml read`
+   - `_wbopendata_topics.yaml` — Can use `yaml read`
 
-3. **Field mapping** — Verify column names match:
-   | yaml collapse output | wbopendata expected |
-   |---------------------|---------------------|
-   | `_key` | `ind_code` |
-   | `code` | `code` |
-   | `name` | `name` |
-   | `source_id` | `source_id` |
-   | `description` | `description` |
+**Migration Blockers:**
 
-4. **Rename `_key` to `ind_code`**:
-   ```stata
-   rename _key ind_code
-   ```
+The `collapse` post-processor in yaml v1.7.0 is designed for flat YAML structures. 
+For the wbopendata indicators YAML with ~29,000 indicators and nested fields, collapse
+creates one column per unique YAML path, not one column per top-level field. This
+produces 989 columns instead of the expected ~12 columns.
 
-5. **Delete `__wbod_parse_yaml_ind.ado`** after validation
+**Options for Future Work:**
 
-6. **Run test suite** (89 tests) to verify parity
+1. **Enhance `_yaml_collapse.ado`** — Add `level` or `fields` option to limit collapse depth
+2. **Create wrapper function** — Post-process collapse output to select/rename needed columns
+3. **Keep custom parser** — Current solution; proven to work, acceptable performance (~40s)
 
 **Lines of Code Impact:**
-- Delete: 238 lines (`__wbod_parse_yaml_ind.ado`)
-- Add: ~5 lines (yaml read + rename)
+- Added: 14 yaml ado files + 3 sthlp files (bundled from yaml-dev)
+- Retained: `__wbod_parse_yaml_ind.ado` (238 lines)
 
 ---
 
 ### INT-2: unicefdata Integration
 
-**Status:** Planned
-**Branch:** `feat/yaml-v1.7-integration` (off `develop`)
+**Status:** Planned (next step)
+**Branch:** To be created off `develop`
 **Target Files:**
-- `stata/src/_/__unicef_parse_indicators_yaml.ado` (270 lines) → Replace
-- `stata/src/_/__unicef_parse_indicator_yaml.ado` → Review
+- `stata/src/_/__unicef_parse_indicators_yaml.ado` (270 lines) → Evaluate
 
 **Current State:**
 
@@ -417,7 +404,7 @@ unicefdata has a custom YAML parser (`__unicef_parse_indicators_yaml.ado`) that:
 - Uses `st_sstore()` for Mata-based row insertion
 - Outputs one row per indicator
 
-**Migration Plan:**
+**Migration Plan (if YAML structure is simpler, same blocker applies if nested):**
 
 1. **Add yaml dependency** to `unicefdata.pkg`
 
