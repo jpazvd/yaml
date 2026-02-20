@@ -32,28 +32,38 @@ file write `fh' "indicators:" _n
 file write `fh' "  GDP.MKTP.CD:" _n
 file write `fh' "    code: GDP.MKTP.CD" _n
 file write `fh' "    name: GDP (current US$)" _n
+file write `fh' "    description: Gross domestic product at purchaser prices" _n
 file write `fh' "    source_id: '2'" _n
 file write `fh' "    topic: Economy" _n
+file write `fh' "    topic_ids: '3;5'" _n
 file write `fh' "  GDP.MKTP.KD:" _n
 file write `fh' "    code: GDP.MKTP.KD" _n
 file write `fh' "    name: GDP (constant 2015 US$)" _n
+file write `fh' "    description: Real GDP adjusted for inflation" _n
 file write `fh' "    source_id: '2'" _n
 file write `fh' "    topic: Economy" _n
+file write `fh' "    topic_ids: '3;5'" _n
 file write `fh' "  SP.POP.TOTL:" _n
 file write `fh' "    code: SP.POP.TOTL" _n
 file write `fh' "    name: Population, total" _n
+file write `fh' "    description: Total population count" _n
 file write `fh' "    source_id: '2'" _n
 file write `fh' "    topic: Health" _n
+file write `fh' "    topic_ids: '8;19'" _n
 file write `fh' "  SE.ADT.LITR.ZS:" _n
 file write `fh' "    code: SE.ADT.LITR.ZS" _n
 file write `fh' "    name: Literacy rate, adult total (% of people ages 15+)" _n
-file write `fh' "    source_id: '2'" _n
+file write `fh' "    description: Percentage of people who can read and write" _n
+file write `fh' "    source_id: '11'" _n
 file write `fh' "    topic: Education" _n
+file write `fh' "    topic_ids: '4'" _n
 file write `fh' "  NY.GDP.PCAP.CD:" _n
 file write `fh' "    code: NY.GDP.PCAP.CD" _n
 file write `fh' "    name: GDP per capita (current US$)" _n
+file write `fh' "    description: GDP divided by midyear population" _n
 file write `fh' "    source_id: '2'" _n
 file write `fh' "    topic: Economy" _n
+file write `fh' "    topic_ids: '3;5'" _n
 file close `fh'
 
 *===============================================================================
@@ -214,6 +224,184 @@ else {
 }
 
 cap frame drop _test_pattern
+
+*===============================================================================
+* TEST 7: Source filtering (source_id field)
+*===============================================================================
+
+di as text _n "TEST 7: Source filtering"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_source)
+frame change _test_source
+
+* Filter by source_id = "2" (WDI)
+qui keep if source_id == "2"
+local src_count = _N
+
+if (`src_count' != 4) {
+    di as error "FEAT-08 FAIL: source_id '2' matched `src_count' rows, expected 4"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: Source filter found 4 WDI indicators"
+}
+
+cap frame drop _test_source
+
+*===============================================================================
+* TEST 8: Multi-field search (name AND description)
+*===============================================================================
+
+di as text _n "TEST 8: Multi-field search"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_multi)
+frame change _test_multi
+
+* Search for "population" in name OR description
+qui keep if strpos(lower(name), "population") > 0 | strpos(lower(description), "population") > 0
+local multi_count = _N
+
+if (`multi_count' != 2) {
+    di as error "FEAT-08 FAIL: 'population' multi-field search found `multi_count' rows, expected 2"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: Multi-field search found 2 population-related indicators"
+}
+
+cap frame drop _test_multi
+
+*===============================================================================
+* TEST 9: Exact code lookup
+*===============================================================================
+
+di as text _n "TEST 9: Exact code lookup"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_exact)
+frame change _test_exact
+
+* Direct lookup by exact code
+qui keep if ind_code == "SP.POP.TOTL"
+local exact_count = _N
+
+if (`exact_count' != 1) {
+    di as error "FEAT-08 FAIL: exact lookup 'SP.POP.TOTL' found `exact_count' rows, expected 1"
+    local all_pass = 0
+}
+else {
+    * Verify we got the right indicator
+    local found_name = name[1]
+    if (strpos("`found_name'", "Population") == 0) {
+        di as error "FEAT-08 FAIL: exact lookup returned wrong indicator"
+        local all_pass = 0
+    }
+    else {
+        di as result "  PASS: Exact code lookup returned correct indicator"
+    }
+}
+
+cap frame drop _test_exact
+
+*===============================================================================
+* TEST 10: List field parsing (semicolon-delimited topic_ids)
+*===============================================================================
+
+di as text _n "TEST 10: List field parsing (topic_ids)"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_list)
+frame change _test_list
+
+* Find indicators with topic_id "5" in their semicolon-delimited list
+qui keep if strpos(topic_ids, "5") > 0
+local list_count = _N
+
+if (`list_count' != 3) {
+    di as error "FEAT-08 FAIL: topic_id '5' found in `list_count' rows, expected 3"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: List field parsing found 3 indicators with topic_id 5"
+}
+
+cap frame drop _test_list
+
+*===============================================================================
+* TEST 11: Frame persistence (survives clear)
+*===============================================================================
+
+di as text _n "TEST 11: Frame persistence"
+
+* Verify frame survives clear (but not clear all - that's expected behavior)
+clear
+
+* Frame should still exist
+cap frame `cache_name': count
+if (_rc != 0) {
+    di as error "FEAT-08 FAIL: frame did not survive 'clear'"
+    local all_pass = 0
+}
+else {
+    local persist_N = r(N)
+    if (`persist_N' != 5) {
+        di as error "FEAT-08 FAIL: frame has `persist_N' rows after clear, expected 5"
+        local all_pass = 0
+    }
+    else {
+        di as result "  PASS: Frame cache persists after clear"
+    }
+}
+
+*===============================================================================
+* TEST 12: Large file performance (optional - uses wbopendata fixture if present)
+*===============================================================================
+
+di as text _n "TEST 12: Large file performance"
+
+local large_fixture "`root'/qa/fixtures/_wbopendata_indicators.yaml"
+cap confirm file "`large_fixture'"
+
+if (_rc != 0) {
+    di as text "  SKIP: Large fixture not found (optional test)"
+}
+else {
+    * Parse large file
+    timer clear 3
+    timer on 3
+    qui yaml read using "`large_fixture'", replace bulk blockscalars strl
+    qui _yaml_collapse
+    timer off 3
+    
+    qui timer list 3
+    local parse_time = r(t3)
+    local large_N = _N
+    
+    * Run 100 exact lookups
+    timer clear 4
+    timer on 4
+    forvalues i = 1/100 {
+        qui count if ind_code == "SP.POP.TOTL"
+    }
+    timer off 4
+    
+    qui timer list 4
+    local lookup_time = r(t4)
+    
+    di as result "  Large file: `large_N' indicators"
+    di as result "  Parse time: `parse_time's"
+    di as result "  100 lookups: `lookup_time's"
+    
+    * Performance threshold: parse < 30s, 100 lookups < 1s
+    if (`parse_time' < 30 & `lookup_time' < 1) {
+        di as result "  PASS: Large file performance within thresholds"
+    }
+    else {
+        di as text "  NOTE: Performance outside ideal thresholds (not a failure)"
+    }
+}
 
 *===============================================================================
 * CLEANUP
