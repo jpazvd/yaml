@@ -660,67 +660,172 @@ The regex pattern \texttt{\^{}indicators\_[A-Za-z0-9\_]+\_dataflow\$} then match
 
 This pattern is now widely used in production systems (e.g., \texttt{unicefdata} v1.4.0) to filter 700+ indicator catalogs at scale while maintaining code clarity and reproducibility. It demonstrates how thoughtful integration of YAML with Stata's frame and command architecture can achieve substantial performance and maintainability gains in modern data-production workflows.
 
+\textbf{Scaling to production catalogs.} Real-world indicator registries operate at substantially larger scales. The \texttt{wbopendata} package \citep{azevedo2014wbopendata} maintains a catalog of approximately 29,000 World Bank indicators stored in YAML files exceeding 360,000 lines, while \texttt{unicefdata} \citep{azevedo2024unicefdata} provides access to 800+ UNICEF indicators. These catalogs benefit from the Phase~2 optimizations:
+
+\begin{stlog}
+. yaml read using "wdi_catalog.yaml", frame(wdi) bulk collapse
+. frame wdi: count
+    29,189
+
+. yaml read using "unicef_catalog.yaml", frame(unicef) bulk collapse strl
+. frame unicef: count
+    830
+\end{stlog}
+
+The \texttt{bulk} option enables streaming tokenization that processes these large files without memory spikes, while \texttt{collapse} converts the flattened key-value pairs into a wide-format dataset suitable for direct querying. For catalogs with long description fields, the \texttt{strl} option stores values as strLs, avoiding Stata's 2,045-character string limit. This combination makes it practical to load, filter, and query indicator metadata at scales previously impractical in Stata. To ensure that future \texttt{yaml} updates do not break these production workflows, compatibility tests covering frame-based query patterns are maintained as part of the QA framework (see Appendix~\ref{sec:qa}).
+
 \subsection{YAML-driven microdata harmonization}
+\label{sec:microdata}
 
 Harmonizing survey microdata often requires mapping a variety of source variables to harmonized names, applying consistent labels, and recoding categorical values. Encoding this logic in YAML keeps harmonization decisions separate from the Stata code that executes them.
 
+\textbf{Source specifications.} Each country survey uses instrument-specific variable names and coding schemes. YAML files capture the original structure for each source, following IHSN naming conventions (\texttt{country\_year\_survey}):
+
 \begin{stlog}
-survey: MICS6
+# ETH_2019_MICS6_source.yaml - Ethiopia MICS6 variable mapping
 country: ETH
-year: 2024
+year: 2019
+survey: MICS6
+ihsn_id: ETH_2019_MICS6
+input_file: data/raw/ETH_2019_MICS6.dta
 
 variables:
   hhid:
     from: HH1
-    to: hhid
-    label: Household ID
-
   male:
     from: HL4
-    to: male
-    label: Sex (1=Male, 0=Female)
     values:
-      - from: 1
-        to: 1
-        label: Male
-      - from: 2
-        to: 0
-        label: Female
+      1: 1
+      2: 0
 \end{stlog}
 
-A harmonization script can use this configuration as follows:
+\begin{stlog}
+# GHA_2018_MICS6_source.yaml - Ghana MICS6 variable mapping
+country: GHA
+year: 2018
+survey: MICS6
+ihsn_id: GHA_2018_MICS6
+input_file: data/raw/GHA_2018_MICS6.dta
+
+variables:
+  hhid:
+    from: HH1
+  male:
+    from: HL4
+    values:
+      1: 1
+      2: 0
+\end{stlog}
+
+\textbf{Target schema.} The harmonized output conforms to a standardized, country-agnostic schema:
 
 \begin{stlog}
-. yaml read using "mics_eth_config.yaml", frame(config)
-. yaml get input_file, frame(config) quiet
+# harmonized_schema.yaml - Target schema (applies to all countries)
+schema_version: "1.0"
+survey_program: MICS6
+
+variables:
+  hhid:
+    type: numeric
+    label: Household ID
+  male:
+    type: categorical
+    label: Sex (1=Male, 0=Female)
+    values:
+      0: Female
+      1: Male
+\end{stlog}
+
+A harmonization script uses the mapping configuration as follows:
+
+\begin{stlog}
+. yaml read using "ETH_2019_MICS6_source.yaml", frame(src)
+. yaml get input_file, frame(src) quiet
 . use "`r(value)'", clear
 
-. yaml list variables, keys children frame(config)
+. yaml list variables, keys children frame(src)
 . local varlist "`r(keys)'"
 
 . foreach var of local varlist {
-      yaml get variables:`var', frame(config) quiet
-      rename `r(from)' `r(to)'
-      label variable `r(to)' "`r(label)'"
+      yaml get variables:`var':from, frame(src) quiet
+      rename `r(value)' `var'
 
-      yaml list variables:`var':values, keys children frame(config)
+      yaml list variables:`var':values, keys children frame(src)
       if "`r(keys)'" != "" {
           local recode_str ""
-          label define `r(to)'_lbl, replace
-
           foreach v of local r(keys) {
-              yaml get variables:`var':values:`v', frame(config) quiet
-              local recode_str "`recode_str' (`r(from)' = `r(to)')"
-              if "`r(to)'" != "." label define `r(to)'_lbl `r(to)' "`r(label)'", add
+              yaml get variables:`var':values:`v', frame(src) quiet
+              local recode_str "`recode_str' (`v' = `r(value)')"
           }
-
-          recode `r(to)' `recode_str'
-          label values `r(to)' `r(to)'_lbl
+          recode `var' `recode_str'
       }
   }
 \end{stlog}
 
 This separation of **harmonization logic** (YAML) from **execution** (Stata) improves traceability, documentation, and cross-language interoperability.
+
+\textbf{Automated code generation.} For large-scale harmonization programs spanning multiple countries and survey rounds, manually maintaining do-files becomes unwieldy. An ado-file can read the source mappings and target schema, then generate self-contained harmonization scripts for each country-year-survey combination. This pattern follows the International Household Survey Network (IHSN) microdata documentation standards \citep{ihsn2024standards}, which emphasize traceable, reproducible data processing with clear separation of raw and harmonized datasets.
+
+The generator reads a registry of source configurations and a target schema:
+
+\begin{stlog}
+. yaml read using "harmonized_schema.yaml", frame(target)
+. yaml read using "registry.yaml", frame(registry)
+
+. yaml list surveys, keys children frame(registry)
+. local surveys "`r(keys)'"
+
+. foreach s of local surveys {
+      yaml get surveys:`s':source_yaml, frame(registry) quiet
+      local src_yaml "`r(value)'"
+      yaml get surveys:`s':ihsn_id, frame(registry) quiet
+      local ihsn_id "`r(value)'"
+
+      * Generate do-file for this survey (IHSN naming: country_year_survey)
+      generate_harmonization_do, ///
+          source("`src_yaml'") ///
+          schema(target) ///
+          output("dofiles/`ihsn_id'_harm.do")
+  }
+\end{stlog}
+
+The \texttt{generate\_harmonization\_do} program (distributed separately) iterates over variables in the source mapping, cross-references against the target schema, and emits a complete do-file with:
+
+\begin{itemize}
+    \item Header comments documenting survey metadata, generation timestamp, and schema version
+    \item \texttt{use} command for the raw input file
+    \item \texttt{rename} commands from original to harmonized variable names
+    \item \texttt{recode} commands for categorical value mappings
+    \item \texttt{label variable} and \texttt{label define/values} commands from the target schema
+    \item \texttt{save} command using IHSN naming conventions (\texttt{harmonized/\{country\}\_\{year\}\_\{survey\}\_harm.dta})
+\end{itemize}
+
+An example generated do-file:
+
+\begin{stlog}
+* ETH_2019_MICS6_harm.do - Auto-generated harmonization script
+* IHSN ID: ETH_2019_MICS6
+* Source: ETH_2019_MICS6_source.yaml | Schema: harmonized_schema v1.0
+* Generated: 2026-02-20 17:15:00
+
+use "data/raw/ETH_2019_MICS6.dta", clear
+
+* Variable: hhid (from HH1)
+rename HH1 hhid
+label variable hhid "Household ID"
+
+* Variable: male (from HL4)
+rename HL4 male
+recode male (1 = 1) (2 = 0)
+label define male_lbl 0 "Female" 1 "Male"
+label values male male_lbl
+label variable male "Sex (1=Male, 0=Female)"
+
+compress
+save "harmonized/ETH_2019_MICS6_harm.dta", replace
+\end{stlog}
+
+This approach ensures that harmonization logic remains auditable in YAML while execution artifacts (do-files) are regenerated deterministically from source configurations. Changes to mappings propagate automatically on regeneration, reducing manual errors and supporting quality assurance workflows required by IHSN and similar standards.
 
 \subsection{Configuration validation}
 
@@ -904,4 +1009,110 @@ The author thanks the Stata Journal editors and anonymous reviewers for their co
 \begin{aboutauthor}
 Jo\~ao Pedro Azevedo is Deputy Director and Chief Statistician in UNICEF's Division of Data, Analytics, Planning and Monitoring. He works on official statistics and the development of reproducible, cross-platform, and scalable analytical pipelines that support the production and use of child-related data in global monitoring systems, with the aim of generating policy-relevant insights and informing action on the ground.
 \end{aboutauthor}
+
+\appendix
+\renewcommand{\thesection}{A}
+\renewcommand{\thesubsection}{A.\arabic{subsection}}
+
+\section{Quality assurance framework}
+\label{sec:qa}
+
+The \texttt{yaml} module includes a comprehensive quality assurance (QA) framework designed to ensure correctness across all subcommands and both parser modes. The framework follows a test-driven methodology with automated regression testing.
+
+\subsection{Architecture}
+
+The QA system comprises four test families covering distinct aspects of functionality:
+
+\begin{center}
+\begin{tabular}{llcl}
+\hline
+\textbf{Family} & \textbf{Scope} & \textbf{Tests} & \textbf{Description} \\
+\hline
+ENV   & Environment    & 3  & Module installation and discoverability \\
+EX    & Examples       & 3  & Smoke tests for core workflows \\
+REG   & Regression     & 8  & Bug-fix validation \\
+FEAT  & Features       & 8  & New functionality validation \\
+\hline
+      & \textbf{Total} & 22 & \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Test execution}
+
+Tests are executed via a unified runner:
+
+\begin{stlog}
+. cd C:/GitHub/myados/yaml-dev/qa
+. do run_tests.do         // Full suite (22 tests)
+. do run_tests.do FEAT-08 // Single test
+. do run_tests.do list    // List available tests
+\end{stlog}
+
+The runner produces structured logs in \texttt{qa/logs/} and appends results to a tracked \texttt{test\_history.txt} file for audit purposes.
+
+\subsection{Coverage highlights}
+
+\textbf{Regression tests} (REG-01 through REG-08) target specific bug fixes, ensuring that resolved issues do not reoccur. Each regression test references a documented bug identifier and includes both the failing case and the expected correct behavior.
+
+\textbf{Feature tests} (FEAT-01 through FEAT-08) validate new capabilities introduced in v1.6.0 and later. FEAT-08 alone contains 15 sub-tests covering frame-based query patterns used in production by \texttt{wbopendata} and \texttt{unicefdata}. These tests serve as a compatibility contract: they ensure that future updates to the \texttt{yaml} module will not break the required functionality of these downstream packages, which depend on specific parsing behaviors and frame operations for managing large indicator catalogs:
+
+\begin{itemize}
+    \item Bulk parse with \texttt{bulk} + \texttt{collapse} options
+    \item Frame cache operations (put/get pattern)
+    \item Keyword, topic, and regex-based indicator search
+    \item Multi-field search (name AND description)
+    \item List field parsing (semicolon-delimited values)
+    \item Frame persistence across \texttt{clear}
+\end{itemize}
+
+\subsection{Results summary}
+
+As of v1.7.0, all 22 tests pass on Stata 17+ and Stata 18. Frame-dependent tests (REG-02, FEAT-08) require Stata~16+; they are automatically skipped on earlier versions with appropriate warnings.
+
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+\textbf{Test Family} & \textbf{Passed} & \textbf{Total} \\
+\hline
+ENV  & 3 & 3 \\
+EX   & 3 & 3 \\
+REG  & 8 & 8 \\
+FEAT & 8 & 8 \\
+\hline
+\textbf{All} & \textbf{22} & \textbf{22} \\
+\hline
+\end{tabular}
+\end{center}
+
+The QA framework documentation and test scripts are distributed with the module in the \texttt{qa/} directory, enabling users to verify correct installation and behavior in their local environment.
+
+\subsection{Test fixtures}
+
+The test suite uses purpose-built YAML fixtures stored in \texttt{qa/fixtures/}. Each fixture isolates a specific parsing scenario or edge case:
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+\textbf{Fixture} & \textbf{Purpose} \\
+\hline
+\texttt{block\_scalars.yaml} & Literal (\texttt{|}) and folded (\texttt{>}) block syntax \\
+\texttt{brackets\_in\_values.yaml} & REG-06: \texttt{[]} and \texttt{\{\}} preserved in values \\
+\texttt{collapse\_test.yaml} & Wide-format \texttt{collapse} option output \\
+\texttt{continuation\_lines.yaml} & Multi-line string handling \\
+\texttt{embedded\_quotes.yaml} & FEAT-01: double quotes via Mata \\
+\texttt{long\_values.yaml} & FEAT-04: strL truncation prevention \\
+\texttt{validate\_types.yaml} & REG-05: type validation matching \\
+\texttt{\_wbopendata\_indicators.yaml} & Large catalog performance (optional) \\
+\hline
+\end{tabular}
+\end{center}
+
+For portability, fixtures are distributed as \texttt{fixtures.zip} and automatically extracted on first test run. The optional \texttt{\_wbopendata\_indicators.yaml} fixture (29,000+ entries) enables large-scale performance testing but is skipped by default to avoid slow test runs. Users can enable it by placing the file in the fixtures directory before running FEAT-08.
+
+\subsection{Relation to downstream package testing}
+
+The \texttt{yaml} module serves as a foundational dependency for \texttt{wbopendata} and \texttt{unicefdata}, which maintain their own comprehensive testing frameworks. The \texttt{wbopendata} QA suite comprises 89 tests including deterministic offline tests using pre-recorded fixtures, while the \texttt{unicefdata} ecosystem employs a cross-platform testing framework with 443 tests spanning Stata, Python, and R implementations.
+
+The FEAT-08 compatibility tests in this module are designed to mirror the frame-based query patterns used by these downstream packages. When the downstream test suites pass, users can be confident that the full stack---from YAML parsing to indicator discovery to API response processing---operates correctly. Conversely, the yaml-level tests serve as an early warning system: a failure in FEAT-08 would signal potential breaking changes before they propagate to production workflows.
 
