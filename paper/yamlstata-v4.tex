@@ -660,7 +660,7 @@ The regex pattern \texttt{\^{}indicators\_[A-Za-z0-9\_]+\_dataflow\$} then match
 
 This pattern is now widely used in production systems (e.g., \texttt{unicefdata} v1.4.0) to filter 700+ indicator catalogs at scale while maintaining code clarity and reproducibility. It demonstrates how thoughtful integration of YAML with Stata's frame and command architecture can achieve substantial performance and maintainability gains in modern data-production workflows.
 
-\textbf{Scaling to production catalogs.} Real-world indicator registries operate at substantially larger scales. The \texttt{wbopendata} package \citep{azevedo2014wbopendata} maintains a catalog of approximately 29,000 World Bank indicators stored in YAML files exceeding 360,000 lines, while \texttt{unicefdata} \citep{azevedo2024unicefdata} provides access to 800+ UNICEF indicators. These catalogs benefit from the Phase~2 optimizations:
+\textbf{Scaling to production catalogs.} Real-world indicator registries operate at substantially larger scales. The \texttt{wbopendata} package \citep{azevedo2011wbopendata} maintains a catalog of approximately 29,000 World Bank indicators stored in YAML files exceeding 360,000 lines, while \texttt{unicefdata} \citep{azevedo2025unicefdata} provides access to 800+ UNICEF indicators. These catalogs benefit from the Phase~2 optimizations:
 
 \begin{stlog}
 . yaml read using "wdi_catalog.yaml", frame(wdi) bulk collapse
