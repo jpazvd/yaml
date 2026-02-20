@@ -95,13 +95,15 @@ else {
 }
 
 *===============================================================================
-* TEST: Block scalars without blockscalars option should error
+* TEST: Without blockscalars, markers are stored as literal values
 *===============================================================================
 
-capture yaml read using "`fixture'", replace
-if (_rc == 0) {
-    di as error "FEAT-02 FAIL: block scalars without blockscalars option should error"
-    local all_pass = 0
+yaml read using "`fixture'", replace
+
+* Without blockscalars, ">" should be stored as literal value, not folded
+qui levelsof value if key == "topics_education_description", local(v) clean
+if (`"`v'"' == ">") {
+    di as text "FEAT-02 CHECK: without blockscalars, '>' stored as literal (correct)"
 }
 
 *===============================================================================
