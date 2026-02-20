@@ -48,6 +48,8 @@ foreach arg of local args {
 		di as text "  FEAT-02  block scalar support in canonical parser"
 		di as text "  FEAT-03  continuation lines for multi-line scalars"
 		di as text "  FEAT-04  strL option prevents value truncation"
+		di as text "  FEAT-05  Mata bulk-load produces correct output (Phase 2)"
+		di as text "  FEAT-06  collapse option produces wide-format output (Phase 2)"
 		exit
 	}
 	else {
@@ -432,6 +434,34 @@ if "`target_test'" == "" | "`target_test'" == "FEAT-04" {
 	}
 	else {
 		test_fail, id("FEAT-04") msg("test_strl_option.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-05: Mata bulk-load produces correct output (Phase 2 — skips if not implemented)
+if "`target_test'" == "" | "`target_test'" == "FEAT-05" {
+	test_start, id("FEAT-05") desc("Mata bulk-load produces correct output")
+	capture quietly do "`qadir'/scripts/test_mata_bulk.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-05")
+	}
+	else {
+		test_fail, id("FEAT-05") msg("test_mata_bulk.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-06: collapse option produces wide-format output (Phase 2 — skips if not implemented)
+if "`target_test'" == "" | "`target_test'" == "FEAT-06" {
+	test_start, id("FEAT-06") desc("collapse option produces wide-format output")
+	capture quietly do "`qadir'/scripts/test_collapse.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-06")
+	}
+	else {
+		test_fail, id("FEAT-06") msg("test_collapse.do failed (rc=`erc')")
 	}
 }
 
