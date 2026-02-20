@@ -10,7 +10,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.5.1 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-read support.
+**Latest:** v1.7.0 with Mata bulk-load parser, collapsed wide-format output, and frame-based query operations.
 
 ### Key Features
 
@@ -23,6 +23,9 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Field-selective extraction** with `fields()`
 - **List block extraction** with `listkeys()` (fast-read)
 - **Frame caching** with `cache()` (Stata 16+)
+- **Mata bulk parser** for high-performance parsing (Phase 2)
+- **Collapse option** for wide-format indicator output (Phase 2)
+- **strL support** for values exceeding 2045 characters
 
 ## Installation
 
@@ -136,6 +139,9 @@ yaml read using filename.yaml [, options]
 - `stream` - Use streaming tokenization for canonical parse
 - `index(string)` - Materialize an index frame for repeated queries (Stata 16+)
 - `cache(string)` - Cache parsed results in a frame (Stata 16+)
+- `bulk` - Use Mata bulk-load parser for high-performance parsing (Phase 2)
+- `collapse` - Produce wide-format output with `_yaml_collapse` (Phase 2)
+- `strl` - Use strL storage for values exceeding 2045 characters
 
 ## What's New
 
@@ -481,9 +487,17 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.5.1)
+│   ├── yaml.ado           # Main command (v1.7.0)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
+├── src/_/
+│   ├── _yaml_mataread.ado # Mata bulk-load parser (Phase 2)
+│   └── _yaml_collapse.ado # Wide-format collapse helper (Phase 2)
+├── qa/
+│   ├── run_tests.do       # QA runner (22 tests)
+│   ├── README.md          # QA framework documentation
+│   ├── scripts/           # Test scripts (20 files)
+│   └── fixtures/          # Test fixtures
 ├── examples/              # Examples and test files
 │   ├── README.md
 │   ├── yaml_sj_article_examples.do   # Stata Journal article examples
