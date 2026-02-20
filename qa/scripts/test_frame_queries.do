@@ -64,6 +64,27 @@ file write `fh' "    description: GDP divided by midyear population" _n
 file write `fh' "    source_id: '2'" _n
 file write `fh' "    topic: Economy" _n
 file write `fh' "    topic_ids: '3;5'" _n
+file write `fh' "  SP.POP.GROW:" _n
+file write `fh' "    code: SP.POP.GROW" _n
+file write `fh' "    name: Population growth (annual %)" _n
+file write `fh' "    description: Annual population growth rate" _n
+file write `fh' "    source_id: '2'" _n
+file write `fh' "    topic: Health" _n
+file write `fh' "    topic_ids: '8'" _n
+file write `fh' "  SE.PRM.ENRL:" _n
+file write `fh' "    code: SE.PRM.ENRL" _n
+file write `fh' "    name: Primary school enrollment" _n
+file write `fh' "    description: Total primary education enrollment" _n
+file write `fh' "    source_id: '2'" _n
+file write `fh' "    topic: Education" _n
+file write `fh' "    topic_ids: '4'" _n
+file write `fh' "  NY.GNP.PCAP.CD:" _n
+file write `fh' "    code: NY.GNP.PCAP.CD" _n
+file write `fh' "    name: GNI per capita (current US$)" _n
+file write `fh' "    description: Gross national income per capita" _n
+file write `fh' "    source_id: '2'" _n
+file write `fh' "    topic: Economy" _n
+file write `fh' "    topic_ids: '3;5'" _n
 file close `fh'
 
 *===============================================================================
@@ -80,12 +101,12 @@ if (_rc != 0) {
 else {
     qui _yaml_collapse
     local N = _N
-    if (`N' != 5) {
-        di as error "FEAT-08 FAIL: expected 5 indicators, got `N'"
+    if (`N' != 8) {
+        di as error "FEAT-08 FAIL: expected 8 indicators, got `N'"
         local all_pass = 0
     }
     else {
-        di as result "  PASS: Parsed 5 indicators"
+        di as result "  PASS: Parsed 8 indicators"
     }
 }
 
@@ -108,12 +129,12 @@ if (_rc != 0) {
 }
 else {
     local cached_N = r(N)
-    if (`cached_N' != 5) {
-        di as error "FEAT-08 FAIL: frame cache has `cached_N' rows, expected 5"
+    if (`cached_N' != 8) {
+        di as error "FEAT-08 FAIL: frame cache has `cached_N' rows, expected 8"
         local all_pass = 0
     }
     else {
-        di as result "  PASS: Frame cache created with 5 rows"
+        di as result "  PASS: Frame cache created with 8 rows"
     }
 }
 
@@ -155,12 +176,12 @@ frame change _test_filter
 qui keep if topic == "Economy"
 local econ_count = _N
 
-if (`econ_count' != 3) {
-    di as error "FEAT-08 FAIL: topic 'Economy' matched `econ_count' rows, expected 3"
+if (`econ_count' != 4) {
+    di as error "FEAT-08 FAIL: topic 'Economy' matched `econ_count' rows, expected 4"
     local all_pass = 0
 }
 else {
-    di as result "  PASS: Topic filter found 3 Economy indicators"
+    di as result "  PASS: Topic filter found 4 Economy indicators"
 }
 
 cap frame drop _test_filter
@@ -239,12 +260,12 @@ frame change _test_source
 qui keep if source_id == "2"
 local src_count = _N
 
-if (`src_count' != 4) {
-    di as error "FEAT-08 FAIL: source_id '2' matched `src_count' rows, expected 4"
+if (`src_count' != 7) {
+    di as error "FEAT-08 FAIL: source_id '2' matched `src_count' rows, expected 7"
     local all_pass = 0
 }
 else {
-    di as result "  PASS: Source filter found 4 WDI indicators"
+    di as result "  PASS: Source filter found 7 WDI indicators"
 }
 
 cap frame drop _test_source
@@ -263,12 +284,12 @@ frame change _test_multi
 qui keep if strpos(lower(name), "population") > 0 | strpos(lower(description), "population") > 0
 local multi_count = _N
 
-if (`multi_count' != 2) {
-    di as error "FEAT-08 FAIL: 'population' multi-field search found `multi_count' rows, expected 2"
+if (`multi_count' != 3) {
+    di as error "FEAT-08 FAIL: 'population' multi-field search found `multi_count' rows, expected 3"
     local all_pass = 0
 }
 else {
-    di as result "  PASS: Multi-field search found 2 population-related indicators"
+    di as result "  PASS: Multi-field search found 3 population-related indicators"
 }
 
 cap frame drop _test_multi
@@ -319,12 +340,12 @@ frame change _test_list
 qui keep if strpos(topic_ids, "5") > 0
 local list_count = _N
 
-if (`list_count' != 3) {
-    di as error "FEAT-08 FAIL: topic_id '5' found in `list_count' rows, expected 3"
+if (`list_count' != 4) {
+    di as error "FEAT-08 FAIL: topic_id '5' found in `list_count' rows, expected 4"
     local all_pass = 0
 }
 else {
-    di as result "  PASS: List field parsing found 3 indicators with topic_id 5"
+    di as result "  PASS: List field parsing found 4 indicators with topic_id 5"
 }
 
 cap frame drop _test_list
@@ -346,8 +367,8 @@ if (_rc != 0) {
 }
 else {
     local persist_N = r(N)
-    if (`persist_N' != 5) {
-        di as error "FEAT-08 FAIL: frame has `persist_N' rows after clear, expected 5"
+    if (`persist_N' != 8) {
+        di as error "FEAT-08 FAIL: frame has `persist_N' rows after clear, expected 8"
         local all_pass = 0
     }
     else {
@@ -402,6 +423,78 @@ else {
         di as text "  NOTE: Performance outside ideal thresholds (not a failure)"
     }
 }
+
+*===============================================================================
+* TEST 13: Regex wildcard * (zero or more)
+*===============================================================================
+
+di as text _n "TEST 13: Regex wildcard * (zero or more)"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_star)
+frame change _test_star
+
+* Pattern: SP.POP.* matches SP.POP.TOTL and SP.POP.GROW
+qui keep if regexm(ind_code, "^SP\.POP\..*")
+local star_count = _N
+
+if (`star_count' != 2) {
+    di as error "FEAT-08 FAIL: pattern SP.POP.* matched `star_count' rows, expected 2"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: Wildcard * found 2 SP.POP.* indicators"
+}
+
+cap frame drop _test_star
+
+*===============================================================================
+* TEST 14: Regex wildcard + (one or more)
+*===============================================================================
+
+di as text _n "TEST 14: Regex wildcard + (one or more)"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_plus)
+frame change _test_plus
+
+* Pattern: SE\..+ matches SE.ADT.LITR.ZS and SE.PRM.ENRL (but not just "SE.")
+qui keep if regexm(ind_code, "^SE\..+")
+local plus_count = _N
+
+if (`plus_count' != 2) {
+    di as error "FEAT-08 FAIL: pattern SE.+ matched `plus_count' rows, expected 2"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: Wildcard + found 2 SE.* indicators"
+}
+
+cap frame drop _test_plus
+
+*===============================================================================
+* TEST 15: Regex wildcard ? (zero or one)
+*===============================================================================
+
+di as text _n "TEST 15: Regex wildcard ? (zero or one)"
+
+* Restore from cache
+frame `cache_name': qui frame put *, into(_test_question)
+frame change _test_question
+
+* Pattern: NY\.G.P\.PCAP matches NY.GDP.PCAP and NY.GNP.PCAP (one char between G and P)
+qui keep if regexm(ind_code, "^NY\.G.P\.PCAP")
+local question_count = _N
+
+if (`question_count' != 2) {
+    di as error "FEAT-08 FAIL: pattern NY.G?P.PCAP matched `question_count' rows, expected 2"
+    local all_pass = 0
+}
+else {
+    di as result "  PASS: Wildcard pattern found 2 NY.G*P.PCAP indicators"
+}
+
+cap frame drop _test_question
 
 *===============================================================================
 * CLEANUP
