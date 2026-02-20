@@ -94,62 +94,18 @@ else {
         file write `dlog' "MISMATCH: bulk=`bulk_N' canonical=`canonical_N'" _n
         local all_pass = 0
 
-        * Show tail of each dataset for comparison
+        * Lightweight tail comparison (no row-by-row loops)
         if (`canon_rc' == 0) {
-            tempfile bulk_data
-            qui save "`bulk_data'"
+            * Show last key from bulk (already in memory)
+            local bk_last = key[_N]
+            local bt_last = type[_N]
+            file write `dlog' "Bulk last row: key=[`bk_last'] type=[`bt_last']" _n
 
-            * Show canonical tail
+            * Show last key from canonical
             qui use "`canon_data'", clear
-            file write `dlog' _n "Canonical last 5 rows (of `canonical_N'):" _n
-            forvalues i = `=max(1, _N-4)'/`=_N' {
-                local ck = key[`i']
-                local ct = type[`i']
-                file write `dlog' "  row `i': key=[`ck'] type=[`ct']" _n
-            }
-
-            * Show bulk tail
-            qui use "`bulk_data'", clear
-            file write `dlog' _n "Bulk last 5 rows (of `bulk_N'):" _n
-            forvalues i = `=max(1, _N-4)'/`=_N' {
-                local bk = key[`i']
-                local bt = type[`i']
-                file write `dlog' "  row `i': key=[`bk'] type=[`bt']" _n
-            }
-
-            * Find first divergence point
-            local minN = min(`canonical_N', `bulk_N')
-            qui use "`canon_data'", clear
-            qui rename key ckey
-            qui rename type ctype
-            qui keep ckey ctype
-            qui gen long _rowid = _n
-            tempfile canon_keys
-            qui save "`canon_keys'"
-            qui use "`bulk_data'", clear
-            qui rename key bkey
-            qui rename type btype
-            qui keep bkey btype
-            qui gen long _rowid = _n
-            qui merge 1:1 _rowid using "`canon_keys'", nogen
-            qui gen byte _diff = (ckey != bkey) | (ctype != btype)
-            qui count if _diff == 1
-            file write `dlog' _n "Rows with key/type differences: `r(N)'" _n
-            if (r(N) > 0) {
-                file write `dlog' "First 5 differences:" _n
-                local ndiff = 0
-                forvalues i = 1/`minN' {
-                    if (`ndiff' >= 5) continue, break
-                    if _diff[`i'] == 1 {
-                        local ndiff = `ndiff' + 1
-                        local ck = ckey[`i']
-                        local bk = bkey[`i']
-                        local ct = ctype[`i']
-                        local bt = btype[`i']
-                        file write `dlog' "  row `i': canon=[`ck'|`ct'] bulk=[`bk'|`bt']" _n
-                    }
-                }
-            }
+            local ck_last = key[_N]
+            local ct_last = type[_N]
+            file write `dlog' "Canon last row: key=[`ck_last'] type=[`ct_last']" _n
         }
     }
 }
