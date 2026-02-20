@@ -50,6 +50,7 @@ foreach arg of local args {
 		di as text "  FEAT-04  strL option prevents value truncation"
 		di as text "  FEAT-05  Mata bulk-load produces correct output (Phase 2)"
 		di as text "  FEAT-06  collapse option produces wide-format output (Phase 2)"
+		di as text "  FEAT-07  Performance comparison across parser modes (Phase 2)"
 		exit
 	}
 	else {
@@ -462,6 +463,20 @@ if "`target_test'" == "" | "`target_test'" == "FEAT-06" {
 	}
 	else {
 		test_fail, id("FEAT-06") msg("test_collapse.do failed (rc=`erc')")
+	}
+}
+
+* FEAT-07: Performance comparison across parser modes (Phase 2)
+if "`target_test'" == "" | "`target_test'" == "FEAT-07" {
+	test_start, id("FEAT-07") desc("Performance comparison across parser modes")
+	capture quietly do "`qadir'/scripts/test_timing.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-07")
+	}
+	else {
+		test_fail, id("FEAT-07") msg("test_timing.do failed (rc=`erc')")
 	}
 }
 
