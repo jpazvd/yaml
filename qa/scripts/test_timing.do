@@ -135,33 +135,55 @@ else {
 
 file write `dlog' _n "--- 4. Mata bulk + collapse ---" _n
 timer clear 4
+timer clear 5
 capture noisily {
     timer on 4
-    yaml read using "`fixture'", replace bulk collapse blockscalars strl
+    yaml read using "`fixture'", replace bulk blockscalars strl
     timer off 4
 }
-local bulkc_rc = _rc
-if (`bulkc_rc' == 198) {
+local bulkc_parse_rc = _rc
+if (`bulkc_parse_rc' == 198) {
     file write `dlog' "Status: SKIPPED (not implemented)" _n
     local bulkc_N = .
     local bulkc_sec = .
 }
-else if (`bulkc_rc' != 0) {
-    file write `dlog' "Status: FAILED rc=`bulkc_rc'" _n
+else if (`bulkc_parse_rc' != 0) {
+    file write `dlog' "Status: FAILED (parse) rc=`bulkc_parse_rc'" _n
     local bulkc_N = .
     local bulkc_sec = .
 }
 else {
-    local bulkc_N = _N
-    qui timer list 4
-    local bulkc_sec = r(t4)
-    file write `dlog' "Status: OK" _n
-    file write `dlog' "Rows: `bulkc_N' (collapsed, one per indicator)" _n
-    file write `dlog' "Time: `bulkc_sec's" _n
+    capture noisily {
+        timer on 5
+        _yaml_collapse
+        timer off 5
+    }
+    local bulkc_collapse_rc = _rc
+    if (`bulkc_collapse_rc' != 0) {
+        qui timer list 4
+        local bulkc_parse_sec = r(t4)
+        file write `dlog' "Status: FAILED (collapse) rc=`bulkc_collapse_rc'" _n
+        file write `dlog' "Parse time: `bulkc_parse_sec's" _n
+        local bulkc_N = .
+        local bulkc_sec = .
+    }
+    else {
+        local bulkc_N = _N
+        qui timer list 4
+        local bulkc_parse_sec = r(t4)
+        qui timer list 5
+        local bulkc_collapse_sec = r(t5)
+        local bulkc_sec = `bulkc_parse_sec' + `bulkc_collapse_sec'
+        file write `dlog' "Status: OK" _n
+        file write `dlog' "Rows: `bulkc_N' (collapsed, one per indicator)" _n
+        file write `dlog' "Parse time: `bulkc_parse_sec's" _n
+        file write `dlog' "Collapse time: `bulkc_collapse_sec's" _n
+        file write `dlog' "Time: `bulkc_sec's" _n
 
-    * Cross-check: collapsed row count should match vectorized
-    if (`vec_rc' == 0 & `bulkc_N' != `vec_N') {
-        file write `dlog' "NOTE: bulk+collapse rows (`bulkc_N') != vectorized rows (`vec_N')" _n
+        * Cross-check: collapsed row count should match vectorized
+        if (`vec_rc' == 0 & `bulkc_N' != `vec_N') {
+            file write `dlog' "NOTE: bulk+collapse rows (`bulkc_N') != vectorized rows (`vec_N')" _n
+        }
     }
 }
 
