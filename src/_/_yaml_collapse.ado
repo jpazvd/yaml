@@ -85,8 +85,8 @@ void _yaml_mata_collapse(string scalar mapfile)
 {
     real scalar    n, i, j, m, capacity, root_len, ent_len
     real scalar    ne, nf, ei, fi, vi, last_us, k, all_digits
-    string scalar  cur_entity, root, ic, f, suffix
-    string colvector keys, values, types, entity
+    string scalar  cur_entity, cur_root, root, ic, f, suffix
+    string colvector keys, values, types, entity, roots
     real colvector   levels
     string colvector r_ic, r_fld, r_val, u_ent, u_fld, safe_fld
     string matrix    wide
@@ -99,25 +99,22 @@ void _yaml_mata_collapse(string scalar mapfile)
     levels = st_data(., st_varindex("level"))
     types  = st_sdata(., st_varindex("type"))
 
-    /* ---- Forward-fill entity from level-2 parent keys ---- */
+    /* ---- Forward-fill entity AND root from parent keys ---- */
+    /* Each entity has its own level-1 root (e.g., _metadata vs indicators) */
     entity = J(n, 1, "")
+    roots  = J(n, 1, "")
     cur_entity = ""
+    cur_root   = ""
     for (i = 1; i <= n; i++) {
+        if (types[i] == "parent" & levels[i] == 1) {
+            cur_root = keys[i]
+        }
         if (types[i] == "parent" & levels[i] == 2) {
             cur_entity = keys[i]
         }
         entity[i] = cur_entity
+        roots[i]  = cur_root
     }
-
-    /* ---- Find root prefix (first level-1 parent key) ---- */
-    root = ""
-    for (i = 1; i <= n; i++) {
-        if (types[i] == "parent" & levels[i] == 1) {
-            root = keys[i]
-            break
-        }
-    }
-    root_len = strlen(root)
 
     /* ---- Single pass: extract (ind_code, field, value) triples ---- */
     capacity = 50000
@@ -131,7 +128,12 @@ void _yaml_mata_collapse(string scalar mapfile)
         if (types[i] == "parent") continue
         if (entity[i] == "" | entity[i] == ".") continue
 
-        /* Extract ind_code (strip root prefix + separator) */
+        /* Skip _metadata section (not indicator data) */
+        if (roots[i] == "_metadata") continue
+
+        /* Extract ind_code (strip entity's own root prefix + separator) */
+        root = roots[i]
+        root_len = strlen(root)
         if (root != "") {
             ic = substr(entity[i], root_len + 2, .)
         }
