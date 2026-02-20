@@ -18,14 +18,14 @@ local all_pass = 1
 
 yaml read using "`fixture'", replace blockscalars
 
-* Check that value variable type is str2000
+* Check that value variable type is NOT strL (should be strNNN after compress)
 local vtype : type value
-if ("`vtype'" != "str2000") {
-    di as error "FEAT-04 FAIL: default value type = '`vtype'', expected 'str2000'"
+if ("`vtype'" == "strL") {
+    di as error "FEAT-04 FAIL: default (no strl) should not produce strL, got '`vtype''"
     local all_pass = 0
 }
 else {
-    di as text "FEAT-04 CHECK: default value type is str2000 (correct)"
+    di as text "FEAT-04 CHECK: default value type is `vtype' (not strL, correct)"
 }
 
 *===============================================================================

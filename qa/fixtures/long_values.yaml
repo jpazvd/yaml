@@ -27,5 +27,14 @@ metadata:
       Statistical Commission and relevant specialized agencies. Historical data
       may be subject to retroactive revisions when improved source data or
       methods become available, and users should always refer to the most recent
-      release for the authoritative estimates. End of description.
+      release for the authoritative estimates. The methodology draws on survey
+      data from Demographic and Health Surveys, Multiple Indicator Cluster
+      Surveys, census records, vital registration systems, and administrative
+      data from line ministries. Regional and global aggregates are computed
+      using population-weighted averages when country coverage exceeds fifty
+      percent of the relevant population. Disaggregation dimensions include
+      sex, age group, urban-rural residence, wealth quintile, and subnational
+      administrative region where data permit. Metadata fields document the
+      original data source, the reference period, and any adjustments applied
+      during harmonization. End of description.
     unit: percent
