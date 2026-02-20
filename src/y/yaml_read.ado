@@ -515,10 +515,10 @@ program define yaml_read, rclass
                                 local block_val `"`next_trim'"'
                             }
                             else if ("`block_style'" == "|" | "`block_style'" == "|-") {
-                                local block_val `"`block_val'"' + char(10) + `"`next_trim'"'
+                                local block_val = `"`block_val'"' + char(10) + `"`next_trim'"'
                             }
                             else {
-                                local block_val `"`block_val'"' + " " + `"`next_trim'"'
+                                local block_val = `"`block_val'"' + " " + `"`next_trim'"'
                             }
                         }
                         file read `fh' line
@@ -547,7 +547,7 @@ program define yaml_read, rclass
                             local has_pending = 1
                             continue, break
                         }
-                        local value `"`value'"' + " " + `"`next_trim'"'
+                        local value = `"`value'"' + " " + `"`next_trim'"'
                         file read `fh' line
                     }
                 }
