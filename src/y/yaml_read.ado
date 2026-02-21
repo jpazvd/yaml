@@ -1,7 +1,8 @@
 *******************************************************************************
 * yaml_read
-*! v 1.8.0   20Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.9.0   20Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
+* v1.9.0: INDICATORS preset for wbopendata/unicefdata indicator metadata
 * v1.8.0: collapse fields() and maxlevel() options for selective columns
 * v1.7.0: Mata bulk-load (BULK), collapsed wide-format output (COLLAPSE)
 * v1.6.0: Mata st_sstore for embedded quote safety, strL option,
@@ -14,7 +15,17 @@ program define yaml_read, rclass
     syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose ///
         FASTREAD FIELDS(string) LISTKEYS(string) CACHE(string) ///
         TARGETS(string) EARLYEXIT STREAM BLOCKSCALARS INDEX(string) STRL ///
-        BULK COLLAPSE COLFIELDS(string) MAXLEVEL(integer 0)]
+        BULK COLLAPSE COLFIELDS(string) MAXLEVEL(integer 0) INDICATORS]
+    
+    * INDICATORS preset: auto-set bulk, collapse, and default colfields
+    if ("`indicators'" != "") {
+        local bulk "bulk"
+        local collapse "collapse"
+        * Use standard indicator metadata fields if colfields not specified
+        if ("`colfields'" == "") {
+            local colfields "code;name;source_id;source_name;description;unit;topic_ids;topic_names;note;limited_data"
+        }
+    }
     
     * Validate option combinations
     if ("`fastread'" != "" & ("`locals'" != "" | "`scalars'" != "")) {

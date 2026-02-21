@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.8.0  20Feb2026}{...}
+{* *! version 1.9.0  20Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -92,6 +92,7 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt collapse}}produce wide-format output (use with {cmd:_yaml_collapse} helper){p_end}
 {synopt:{opt colfields(string)}}filter collapsed output to specific field names (semicolon-separated){p_end}
 {synopt:{opt maxlevel(#)}}limit collapsed columns by depth (1=no underscores, 2=one underscore, etc.){p_end}
+{synopt:{opt indicators}}preset for wbopendata/unicefdata indicator metadata (implies bulk collapse){p_end}
 {synopt:{opt strl}}use strL storage for values exceeding 2045 characters{p_end}
 {synoptline}
 

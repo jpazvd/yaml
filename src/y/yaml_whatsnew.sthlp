@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.8.0  20Feb2026}{...}
+{* *! version 1.9.0  20Feb2026}{...}
 {viewerjumpto "Overview" "yaml_whatsnew##overview"}{...}
 {viewerjumpto "Version history" "yaml_whatsnew##history"}{...}
 
@@ -13,6 +13,12 @@ This file tracks feature updates to the {cmd:yaml} command.
 
 {marker history}{...}
 {title:Version history}
+
+{pstd}{bf:1.9.0} (20Feb2026) — {bf:INDICATORS preset}
+{p 4 8 2}- Added {cmd:indicators} option as preset for wbopendata/unicefdata metadata.{p_end}
+{p 4 8 2}- Automatically enables {cmd:bulk} and {cmd:collapse} with standard field selection.{p_end}
+{p 4 8 2}- Replaces custom indicator parsers with single unified yaml command.{p_end}
+{p 4 8 2}- Usage: {cmd:yaml read using indicators.yaml, indicators replace}{p_end}
 
 {pstd}{bf:1.8.0} (20Feb2026) — {bf:Collapse filter options}
 {p 4 8 2}- Added {cmd:colfields()} option to filter collapsed output to specific field names.{p_end}
