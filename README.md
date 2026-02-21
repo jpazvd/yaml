@@ -79,32 +79,32 @@ list key code name in 1/5
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              yaml.ado                                        │
+│                              yaml.ado                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌─────────┐    ┌─────────┐    ┌──────────┐                               │
-│   │  read   │    │  write  │    │ describe │                               │
-│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
-│        │              │              │                                       │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
-│   │  list   │    │   get   │    │ validate │                               │
-│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
-│        │              │              │                                       │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
-│   │   dir   │    │  frames │    │  clear   │                               │
-│   └─────────┘    └─────────┘    └──────────┘                               │
-│                                                                              │
+│                                                                             │
+│   ┌─────────┐    ┌─────────┐    ┌──────────┐                                │
+│   │  read   │    │  write  │    │ describe │                                │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                                │
+│        │              │              │                                      │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                                │
+│   │  list   │    │   get   │    │ validate │                                │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                                │
+│        │              │              │                                      │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                                │
+│   │   dir   │    │  frames │    │  clear   │                                │
+│   └─────────┘    └─────────┘    └──────────┘                                │
+│                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                         Internal Storage                                     │
+│                         Internal Storage                                    │
 │  ┌────────────────────────────────────────────────────────────────────┐     │
 │  │  Dataset/Frame Structure:                                          │     │
-│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
-│  │  │   key    │   value    │ level │   parent   │   type   │        │     │
-│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
-│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │        │     │
-│  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
+│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐         │     │
+│  │  │   key    │   value    │ level │   parent   │   type   │         │     │
+│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤         │     │
+│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │         │     │
+│  │  └──────────┴────────────┴───────┴────────────┴──────────┘         │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,6 +121,10 @@ list key code name in 1/5
 | `yaml dir` | List all YAML data in memory (dataset and frames) |
 | `yaml frames` | List only YAML frames in memory (Stata 16+) |
 | `yaml clear` | Clear YAML data from memory or frames |
+
+## What's New
+
+See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ## Syntax
 
@@ -152,10 +156,6 @@ yaml read using filename.yaml [, options]
 - `maxlevel(#)` - Limit collapsed columns by nesting depth
 - `indicators` - Preset for wbopendata/unicefdata indicator metadata (implies bulk collapse)
 - `strl` - Use strL storage for values exceeding 2045 characters
-
-## What's New
-
-See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ### yaml write
 
