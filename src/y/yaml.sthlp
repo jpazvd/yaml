@@ -13,7 +13,8 @@
 {viewerjumpto "Stored results" "yaml##results"}{...}
 {viewerjumpto "Author" "yaml##author"}{...}
 {hline}
-{cmd:help yaml}{right:{bf:version 1.9.0}}
+{cmd:help yaml}{right:What's New:  {bf:{help yaml_whatsnew:What's New}}}
+{right:{bf:version 1.9.0}}
 {hline}
 
 {title:Title}
