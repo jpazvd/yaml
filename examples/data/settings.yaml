@@ -1,0 +1,25 @@
+# Data processing settings
+# Used in Stata Journal article examples for YAML-driven scripts
+
+dataset: mics_2024.dta
+output_path: ./results/
+
+variables:
+  - age
+  - sex
+  - stunting
+  - wealth_quintile
+  - region
+
+filters:
+  country: ETH
+  year: 2024
+  
+sample:
+  size: 5000
+  seed: 12345
+  
+analysis:
+  method: regression
+  weights: true
+  cluster_var: psu
