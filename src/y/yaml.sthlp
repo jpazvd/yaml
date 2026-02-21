@@ -1,5 +1,10 @@
 {smcl}
 {* *! version 1.9.0  20Feb2026}{...}
+{vieweralsosee "yaml examples" "help yaml_examples"}{...}
+{vieweralsosee "yaml what's new" "help yaml_whatsnew"}{...}
+{vieweralsosee "" "--"}{...}
+{vieweralsosee "[R] import delimited" "help import delimited"}{...}
+{vieweralsosee "[R] frames" "help frames"}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -7,6 +12,9 @@
 {viewerjumpto "Examples" "yaml##examples"}{...}
 {viewerjumpto "Stored results" "yaml##results"}{...}
 {viewerjumpto "Author" "yaml##author"}{...}
+{hline}
+{cmd:help yaml}{right:{bf:version 1.9.0}}
+{hline}
 
 {title:Title}
 
