@@ -1,0 +1,183 @@
+name: Sync to Public Repo (jpazvd/yaml)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for proper sync
+
+      - name: Prepare public content (whitelist approach)
+        run: |
+          # Create staging directory
+          mkdir -p sync-staging
+
+          echo "=== Copying public folders ==="
+
+          # Core Stata package (the main deliverable)
+          [ -d src ] && cp -r src sync-staging/ && echo "  src/"
+
+          # QA test infrastructure (selective — no logs, no legacy, no debug)
+          if [ -d qa ]; then
+            mkdir -p sync-staging/qa/scripts
+            mkdir -p sync-staging/qa/fixtures
+            mkdir -p sync-staging/qa/docs
+
+            # QA root: runner, docs, protocol
+            cp qa/*.do sync-staging/qa/ 2>/dev/null || true
+            cp qa/*.md sync-staging/qa/ 2>/dev/null || true
+            cp qa/*.txt sync-staging/qa/ 2>/dev/null || true
+
+            # QA test scripts (exclude debug/)
+            cp qa/scripts/*.do sync-staging/qa/scripts/ 2>/dev/null || true
+            cp qa/scripts/*.md sync-staging/qa/scripts/ 2>/dev/null || true
+
+            # QA fixtures (exclude large 18MB wbopendata fixture)
+            cp qa/fixtures/*.yaml sync-staging/qa/fixtures/ 2>/dev/null || true
+            cp qa/fixtures/*.zip sync-staging/qa/fixtures/ 2>/dev/null || true
+            cp qa/fixtures/*.do sync-staging/qa/fixtures/ 2>/dev/null || true
+            cp qa/fixtures/*.md sync-staging/qa/fixtures/ 2>/dev/null || true
+            rm -f sync-staging/qa/fixtures/_wbopendata_indicators.yaml
+
+            # QA docs
+            cp qa/docs/* sync-staging/qa/docs/ 2>/dev/null || true
+
+            echo "  qa/ (scripts, fixtures, docs — no logs/legacy/debug)"
+          fi
+
+          # Examples (selective — no logs, no SJ article examples)
+          if [ -d examples ]; then
+            mkdir -p sync-staging/examples/data
+            cp examples/*.do sync-staging/examples/ 2>/dev/null || true
+            cp examples/*.md sync-staging/examples/ 2>/dev/null || true
+            rm -f sync-staging/examples/yaml_sj_article_examples*
+            cp examples/data/* sync-staging/examples/data/ 2>/dev/null || true
+            echo "  examples/ (scripts and data — no logs/SJ examples)"
+          fi
+
+          # Benchmark scripts
+          [ -d scripts ] && cp -r scripts sync-staging/ && echo "  scripts/"
+
+          echo ""
+          echo "=== Copying root files ==="
+
+          # Documentation
+          cp -v README.md sync-staging/ 2>/dev/null || true
+          cp -v readme.txt sync-staging/ 2>/dev/null || true
+          cp -v LICENSE sync-staging/ 2>/dev/null || true
+          cp -v CHANGELOG.md sync-staging/ 2>/dev/null || true
+
+          # Git configuration
+          if [ -f .gitignore.public ]; then
+            cp -v .gitignore.public sync-staging/.gitignore
+          else
+            cp -v .gitignore sync-staging/
+          fi
+
+          echo ""
+          echo "=== Removing any stray private content ==="
+          # Belt-and-suspenders: remove log files that might have been
+          # copied inside whitelisted folders
+          find sync-staging -name '*.log' -type f -delete 2>/dev/null || true
+          # Remove _archive subfolders (development artifacts)
+          find sync-staging -name '_archive' -type d -exec rm -rf {} + 2>/dev/null || true
+          # Remove any files larger than 5MB (safety net for large fixtures)
+          find sync-staging -type f -size +5M -delete 2>/dev/null || true
+
+          echo ""
+          echo "=== Public content ready ==="
+          echo "Contents to be synced:"
+          ls -la sync-staging/
+          echo ""
+          echo "Folders:"
+          ls -d sync-staging/*/ 2>/dev/null || echo "(no folders)"
+
+      - name: Verify no private content in staging
+        run: |
+          echo "Verifying staging directory..."
+          FOUND_PRIVATE=0
+
+          # These folders/files must NOT be in staging
+          PRIVATE_ITEMS=(
+            "sync-staging/paper"
+            "sync-staging/internal"
+            "sync-staging/doc"
+            "sync-staging/ssc"
+            "sync-staging/qa/logs"
+            "sync-staging/qa/legacy"
+            "sync-staging/qa/scripts/debug"
+            "sync-staging/examples/logs"
+          )
+
+          for item in "${PRIVATE_ITEMS[@]}"; do
+            if [ -e "$item" ]; then
+              echo "FAIL: Found private item: $item"
+              FOUND_PRIVATE=1
+            fi
+          done
+
+          # No .log files anywhere in staging
+          if find sync-staging -name '*.log' -type f 2>/dev/null | grep -q .; then
+            echo "FAIL: Found .log files in staging"
+            find sync-staging -name '*.log' -type f
+            FOUND_PRIVATE=1
+          fi
+
+          # No copilot/AI instruction files
+          if find sync-staging -name 'copilot-instructions.md' -type f 2>/dev/null | grep -q .; then
+            echo "FAIL: Found copilot instructions in staging"
+            FOUND_PRIVATE=1
+          fi
+
+          # No SJ article examples
+          if find sync-staging -name 'yaml_sj_article_examples*' -type f 2>/dev/null | grep -q .; then
+            echo "FAIL: Found Stata Journal article examples in staging"
+            FOUND_PRIVATE=1
+          fi
+
+          # No files larger than 5MB
+          if find sync-staging -type f -size +5M 2>/dev/null | grep -q .; then
+            echo "FAIL: Found files larger than 5MB"
+            find sync-staging -type f -size +5M
+            FOUND_PRIVATE=1
+          fi
+
+          if [ $FOUND_PRIVATE -eq 1 ]; then
+            echo "Aborting sync: Private or oversized files detected in staging!"
+            exit 1
+          fi
+
+          echo "PASS: No private files found. Safe to push."
+
+      - name: Push to public repo (staging branch)
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+        with:
+          source-directory: 'sync-staging'
+          destination-github-username: 'jpazvd'
+          destination-repository-name: 'yaml'
+          target-branch: staging
+          user-name: 'github-actions[bot]'
+          user-email: 'github-actions[bot]@users.noreply.github.com'
+          commit-message: |
+            sync: ${{ github.ref_name }}
+
+            Synced from: jpazvd/yaml-dev@${{ github.sha }}
+
+      - name: Push tags to public repo
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
+          git remote add public-for-tags git@github.com:jpazvd/yaml.git 2>/dev/null || true
+          git push public-for-tags --tags

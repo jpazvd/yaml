@@ -455,7 +455,7 @@ For metadata catalogs with 700+ entries, **vectorized frame-based queries** dram
 | Naive: 733 iterative `yaml get` calls | 15+ seconds | 50× |
 | **Optimized: Direct frame dataset query** | **0.3 seconds** | **1×** |
 
-**Key Pattern** (see paper Section 5.2):
+**Key Pattern:**
 ```stata
 yaml read using indicators_catalog.yaml, frame(meta)
 frame yaml_meta {
@@ -504,27 +504,16 @@ yaml/
 │   ├── _yaml_mataread.ado # Mata bulk-load parser (Phase 2)
 │   └── _yaml_collapse.ado # Wide-format collapse helper (Phase 2)
 ├── qa/
-│   ├── run_tests.do       # QA runner (22 tests)
+│   ├── run_tests.do       # QA runner (26 tests)
 │   ├── README.md          # QA framework documentation
 │   ├── scripts/           # Test scripts (20 files)
 │   └── fixtures/          # Test fixtures
 ├── examples/              # Examples and test files
 │   ├── README.md
-│   ├── yaml_sj_article_examples.do   # Stata Journal article examples
 │   ├── yaml_basic_examples.do        # Basic usage examples
 │   ├── data/              # Sample YAML files
 │   └── logs/              # Output logs from examples
-└── paper/submission/
-    └── latex/
-        ├── main-v2.tex         # LaTeX driver (original version, 19 pages)
-        ├── main-v3.tex         # LaTeX driver (current with optimization, 21 pages)
-        ├── yamlstata-v2.tex    # Article content (original)
-        ├── yamlstata-v3.tex    # Article content (Section 5.2: large catalog optimization)
-        ├── sj.bib              # Bibliography
-        ├── figures/
-        │   ├── yaml_layers_bw.tex    # TikZ source for architecture diagram
-        │   └── yaml_layers_bw.pdf    # Compiled architecture diagram (36 KB)
-        └── [support files]
+└── paper/                 # Documentation and article source
 ```
 
 ## Suggested Citation
@@ -533,10 +522,6 @@ yaml/
 
 Azevedo, João Pedro. 2025. "yaml: Stata module for YAML file processing." 
 Statistical Software Components, Boston College Department of Economics.
-
-**For the Stata Journal article:**
-
-Azevedo, João Pedro. 2025. "Reading and writing YAML files in Stata: A lightweight framework for reproducible and cross-platform analytics." *The Stata Journal*, v3 (forthcoming). See `paper/submission/latex/main-v3.tex` for current version.
 
 ## Author
 

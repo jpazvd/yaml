@@ -11,7 +11,7 @@ cd C:\GitHub\myados\yaml-dev
 . do qa/run_tests.do
 ```
 
-## What It Runs (22 Tests)
+## What It Runs (26 Tests)
 
 ### Environment Checks (ENV)
 - ENV-01: `yaml` command is available
@@ -46,6 +46,14 @@ cd C:\GitHub\myados\yaml-dev
 | `test_collapse.do` | FEAT-06 | Collapse option (wide format) |
 | `test_parser_performance.do` | FEAT-07 | Performance comparison |
 | `test_frame_queries.do` | FEAT-08 | Frame-based query operations |
+| `test_collapse_options.do` | FEAT-09 | colfields() and maxlevel() options |
+
+### Integration Tests (INT)
+| Script | Test ID | Description |
+|--------|---------|-------------|
+| `test_unicefdata_integration.do` | INT-01 | unicefdata yaml → cache → lookup |
+| `test_wbopendata_integration.do` | INT-02 | wbopendata yaml → cache → lookup |
+| `test_cross_package_sync.do` | INT-03 | Cross-package version sync |
 
 ## Required Fixtures
 
