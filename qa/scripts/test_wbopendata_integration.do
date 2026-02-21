@@ -169,10 +169,103 @@ else {
 }
 
 *===============================================================================
-* TEST 4: yaml check utility
+* TEST 4: Indicators preset — topic and source_org field validation
 *===============================================================================
 
-di as text _n "TEST 4: _wbopendata_check_yaml utility"
+di as text _n "TEST 4: indicators preset field validation (REG-09 regression)"
+
+capture noisily {
+    yaml read using "`yaml_file'", indicators replace blockscalars strl
+}
+local rc4a = _rc
+
+if (`rc4a' == 0) {
+    local n4 = _N
+    di as text "  Parsed `n4' indicators with indicators preset"
+
+    * Check topic_names column exists (parent_stack fix)
+    capture confirm variable topic_names
+    if (_rc != 0) {
+        di as error "  FAIL: topic_names column missing (parent_stack contamination bug)"
+        local all_pass = 0
+    }
+    else {
+        * Count indicators with non-empty topic_names
+        qui count if topic_names != "" & topic_names != "[]"
+        local n_with_topics = r(N)
+        di as text "  Indicators with topic_names: `n_with_topics' / `n4'"
+
+        if (`n_with_topics' < 1000) {
+            di as error "  FAIL: too few indicators have topic_names (`n_with_topics')"
+            di as error "        This suggests parent_stack contamination is still present"
+            local all_pass = 0
+        }
+        else {
+            di as result "  PASS: topic_names populated (`n_with_topics' indicators)"
+        }
+    }
+
+    * Check topic_ids column exists
+    capture confirm variable topic_ids
+    if (_rc != 0) {
+        di as error "  FAIL: topic_ids column missing"
+        local all_pass = 0
+    }
+    else {
+        qui count if topic_ids != "" & topic_ids != "[]"
+        local n_with_tids = r(N)
+        di as text "  Indicators with topic_ids: `n_with_tids' / `n4'"
+
+        if (`n_with_tids' < 1000) {
+            di as error "  FAIL: too few indicators have topic_ids (`n_with_tids')"
+            local all_pass = 0
+        }
+        else {
+            di as result "  PASS: topic_ids populated (`n_with_tids' indicators)"
+        }
+    }
+
+    * Check source_org column exists (added to indicators preset colfields)
+    capture confirm variable source_org
+    if (_rc != 0) {
+        di as error "  FAIL: source_org column missing (not in indicators preset colfields)"
+        local all_pass = 0
+    }
+    else {
+        qui count if source_org != ""
+        local n_with_src = r(N)
+        di as text "  Indicators with source_org: `n_with_src' / `n4'"
+
+        if (`n_with_src' < 1000) {
+            di as error "  FAIL: too few indicators have source_org (`n_with_src')"
+            local all_pass = 0
+        }
+        else {
+            di as result "  PASS: source_org populated (`n_with_src' indicators)"
+        }
+    }
+
+    * Spot-check SP.POP.TOTL
+    qui count if ind_code == "SP.POP.TOTL"
+    if (r(N) == 1) {
+        qui levelsof topic_names if ind_code == "SP.POP.TOTL", local(v) clean
+        di as text "  SP.POP.TOTL topic_names = '`v''"
+        if (`"`v'"' == "" | `"`v'"' == "[]") {
+            di as error "  FAIL: SP.POP.TOTL has empty topic_names"
+            local all_pass = 0
+        }
+    }
+}
+else {
+    di as error "  FAIL: indicators preset parse returned rc=`rc4a'"
+    local all_pass = 0
+}
+
+*===============================================================================
+* TEST 5: yaml check utility
+*===============================================================================
+
+di as text _n "TEST 5: _wbopendata_check_yaml utility"
 
 capture which _wbopendata_check_yaml
 if (_rc == 0) {
