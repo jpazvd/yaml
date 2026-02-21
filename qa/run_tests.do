@@ -55,6 +55,11 @@ foreach arg of local args {
 		di as text ""
 		di as text "  Feature Tests (v1.8.0):"
 		di as text "  FEAT-09  colfields() and maxlevel() collapse filter options"
+		di as text ""
+		di as text "  Integration Tests:"
+		di as text "  INT-01   unicefdata-dev yaml → cache → lookup pipeline"
+		di as text "  INT-02   wbopendata-dev yaml → cache → lookup pipeline"
+		di as text "  INT-03   Cross-package yaml.ado version sync check"
 		exit
 	}
 	else {
@@ -517,6 +522,48 @@ if "`target_test'" == "" | "`target_test'" == "FEAT-09" {
 	}
 	else {
 		test_fail, id("FEAT-09") msg("test_collapse_options.do failed (rc=`erc')")
+	}
+}
+
+* INT-01: unicefdata-dev integration (yaml → cache → lookup)
+if "`target_test'" == "" | "`target_test'" == "INT-01" {
+	test_start, id("INT-01") desc("unicefdata-dev yaml → cache integration")
+	capture quietly do "`qadir'/scripts/test_unicefdata_integration.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("INT-01")
+	}
+	else {
+		test_fail, id("INT-01") msg("test_unicefdata_integration.do failed (rc=`erc')")
+	}
+}
+
+* INT-02: wbopendata-dev integration (yaml → cache → lookup)
+if "`target_test'" == "" | "`target_test'" == "INT-02" {
+	test_start, id("INT-02") desc("wbopendata-dev yaml → cache integration")
+	capture quietly do "`qadir'/scripts/test_wbopendata_integration.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("INT-02")
+	}
+	else {
+		test_fail, id("INT-02") msg("test_wbopendata_integration.do failed (rc=`erc')")
+	}
+}
+
+* INT-03: Cross-package yaml.ado version sync check
+if "`target_test'" == "" | "`target_test'" == "INT-03" {
+	test_start, id("INT-03") desc("Cross-package yaml.ado version sync")
+	capture quietly do "`qadir'/scripts/test_cross_package_sync.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("INT-03")
+	}
+	else {
+		test_fail, id("INT-03") msg("test_cross_package_sync.do failed (rc=`erc')")
 	}
 }
 
