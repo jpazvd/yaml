@@ -52,6 +52,9 @@ foreach arg of local args {
 		di as text "  FEAT-06  collapse option produces wide-format output (Phase 2)"
 		di as text "  FEAT-07  Performance comparison across parser modes (Phase 2)"
 		di as text "  FEAT-08  Frame-based query operations (wbopendata-style)"
+		di as text ""
+		di as text "  Feature Tests (v1.8.0):"
+		di as text "  FEAT-09  colfields() and maxlevel() collapse filter options"
 		exit
 	}
 	else {
@@ -500,6 +503,20 @@ if "`target_test'" == "" | "`target_test'" == "FEAT-08" {
 	}
 	else {
 		test_skip, id("FEAT-08") msg("requires Stata 16+ (frames)")
+	}
+}
+
+* FEAT-09: colfields() and maxlevel() collapse filter options (v1.8.0)
+if "`target_test'" == "" | "`target_test'" == "FEAT-09" {
+	test_start, id("FEAT-09") desc("colfields() and maxlevel() collapse options")
+	capture quietly do "`qadir'/scripts/test_collapse_options.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("FEAT-09")
+	}
+	else {
+		test_fail, id("FEAT-09") msg("test_collapse_options.do failed (rc=`erc')")
 	}
 }
 
