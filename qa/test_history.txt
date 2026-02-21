@@ -414,3 +414,31 @@ Skipped:   0
 Result:    ALL TESTS PASSED
 Log:       run_tests.log
 ======================================================================
+
+======================================================================
+Test Run:  20 Feb 2026
+Started:   21:42:21
+Ended:     21:45:16
+Duration:  2m 55s
+Branch:    feat/collapse
+Version:   1.9.0
+Stata:     17
+Tests:     23 run, 23 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  21 Feb 2026
+Started:   05:03:34
+Ended:     05:06:09
+Duration:  2m 35s
+Branch:    develop
+Version:   1.9.0
+Stata:     17
+Tests:     23 run, 23 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================
