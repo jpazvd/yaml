@@ -1,0 +1,21 @@
+# Test fixture for BUG-1 (last_key) and BUG-2 (parent_stack)
+# BUG-1: list items after a leaf key should reference the leaf key as parent
+# BUG-2: nested parents should have correct parent hierarchy
+
+project:
+  name: Test Project
+  version: 1.0
+  tags:
+    - alpha
+    - beta
+    - gamma
+
+database:
+  host: localhost
+  port: 5432
+  options:
+    timeout: 30
+    retries: 3
+    flags:
+      - read_only
+      - compress
