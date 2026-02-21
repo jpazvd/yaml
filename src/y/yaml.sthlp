@@ -46,6 +46,9 @@
 {synopt:{opt clear}}clear YAML data from memory{p_end}
 {synoptline}
 {p2colreset}{...}
+{pstd}
+See {bf:{help yaml_whatsnew:What's New}} for version history.
+{p_end}
 
 
 {marker description}{...}
