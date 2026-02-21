@@ -3,6 +3,7 @@
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
 [![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.9.0-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v1.9.0)
 
 ## Description
 
@@ -10,7 +11,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.7.0 with Mata bulk-load parser, collapsed wide-format output, and frame-based query operations.
+**Latest:** [v1.9.0](https://github.com/jpazvd/yaml/releases/tag/v1.9.0) with `indicators` preset for wbopendata/unicefdata, `colfields()` and `maxlevel()` filtering, and Mata bulk-load parser.
 
 ### Key Features
 
@@ -25,6 +26,8 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Frame caching** with `cache()` (Stata 16+)
 - **Mata bulk parser** for high-performance parsing (Phase 2)
 - **Collapse option** for wide-format indicator output (Phase 2)
+- **Collapse filters** with `colfields()` and `maxlevel()` (v1.8.0)
+- **Indicators preset** for wbopendata/unicefdata metadata (v1.9.0)
 - **strL support** for values exceeding 2045 characters
 
 ## Installation
@@ -66,6 +69,10 @@ yaml write using output.yaml, replace
 * Speed-first metadata read (fastread)
 yaml read using indicators.yaml, fastread fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
+
+* Parse wbopendata/unicefdata indicator metadata (v1.9.0)
+yaml read using indicators.yaml, indicators replace
+list key code name in 1/5
 ```
 
 ## Architecture
@@ -141,6 +148,9 @@ yaml read using filename.yaml [, options]
 - `cache(string)` - Cache parsed results in a frame (Stata 16+)
 - `bulk` - Use Mata bulk-load parser for high-performance parsing (Phase 2)
 - `collapse` - Produce wide-format output with `_yaml_collapse` (Phase 2)
+- `colfields(string)` - Filter collapsed output to specific field names (semicolon-separated)
+- `maxlevel(#)` - Limit collapsed columns by nesting depth
+- `indicators` - Preset for wbopendata/unicefdata indicator metadata (implies bulk collapse)
 - `strl` - Use strL storage for values exceeding 2045 characters
 
 ## What's New
