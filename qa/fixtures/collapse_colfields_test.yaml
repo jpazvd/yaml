@@ -1,0 +1,64 @@
+# Fixture: collapse_colfields_test.yaml  
+# Test for colfields() option to filter specific columns
+# Mimics wbopendata/unicefData indicator structure with mixed nesting depth
+
+indicators:
+  EDU_PRIMARY:
+    code: EDU_PRIMARY
+    name: Primary education enrollment
+    source_id: UNESCO
+    source_name: UNESCO Institute for Statistics
+    unit: percent
+    description: >-
+      Gross enrollment ratio for primary education,
+      both sexes combined.
+    topic_ids:
+      - EDU
+      - SDG4
+    topic_names:
+      - Education
+      - Sustainable Development Goal 4
+    note: Updated annually
+    limited_data: false
+
+  HEALTH_IMM:
+    code: HEALTH_IMM
+    name: Immunization coverage
+    source_id: WHO
+    source_name: World Health Organization
+    unit: percent
+    description: >-
+      Percentage of children receiving recommended
+      vaccines by age 1.
+    topic_ids:
+      - HEALTH
+      - SDG3
+    topic_names:
+      - Health
+      - Sustainable Development Goal 3
+    note: ""
+    limited_data: true
+
+  PROT_BIRTH:
+    code: PROT_BIRTH
+    name: Birth registration
+    source_id: UNICEF
+    source_name: UNICEF Data
+    unit: percent
+    description: >-
+      Percentage of children under age 5
+      whose births are registered.
+    topic_ids:
+      - PROT
+      - SDG16
+    topic_names:
+      - Protection
+      - Sustainable Development Goal 16
+    note: Data from household surveys
+    limited_data: false
+
+_metadata:
+  version: "1.0"
+  source: yaml-dev QA
+  generated_at: 2026-02-20
+  total_indicators: 3
