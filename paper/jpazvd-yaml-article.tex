@@ -1,6 +1,6 @@
 % jpazvd-yaml-article.tex — Stata Journal article content
 % To be included from jpazvd-yaml.tex
-% Version 1.7.0 with Phase 2 features (Mata bulk parser, collapse, strL)
+% Version 1.9.0 with high-performance Mata parser, collapse filters, indicators preset
 
 \inserttype[st0001]{article}
 
@@ -19,7 +19,7 @@ A lightweight, dependency-free implementation}
 \maketitle
 
 \begin{abstract}
-YAML (``YAML Ain't Markup Language'') is a widely used, human-readable data-serialization standard that underpins configuration management in modern analytical ecosystems, including GitHub Actions, R and Python pipelines, Jupyter workflows, and cloud-based orchestration tools. Although Stata increasingly participates in multi-language, reproducible workflows, it lacks native support for reading or writing YAML. This article introduces \texttt{yaml}, a unified Stata command that provides nine subcommands for parsing, generating, querying, and validating YAML files. The command enables users to import structured configuration files into datasets or frames, work with metadata programmatically, and export updated configurations back to YAML. The implementation is lightweight, dependency-free, and targets the JSON-compatible subset of the YAML~1.2 specification. An opt-in fast-read mode provides near-linear performance for large metadata catalogs, with field-selective extraction and frame-based caching for repeated queries. Version~1.7.0 introduces a high-performance Mata-based bulk parser with wide-format output via the \texttt{collapse} option, and \texttt{strL} storage for values exceeding 2045~characters. Block scalars are now supported in both fast-read and canonical parsing modes. Subcommand abbreviations and improved error messages support interactive use. We illustrate applications in indicator metadata management using the UNICEF SDMX API, YAML-driven survey microdata harmonization, and configuration validation in automated pipelines. We conclude with recommendations for integrating YAML-based workflows into Stata-centered data production systems.
+YAML (``YAML Ain't Markup Language'') is a widely used, human-readable data-serialization standard that underpins configuration management in modern analytical ecosystems, including GitHub Actions, R and Python pipelines, and cloud-based orchestration tools. Although Stata increasingly participates in multi-language, reproducible workflows, it lacks native support for reading or writing YAML. This article introduces \texttt{yaml}, a unified Stata command with nine subcommands for parsing, generating, querying, and validating YAML files. The implementation is lightweight, dependency-free, and targets the JSON-compatible subset of the YAML~1.2 specification. Three parsing modes address different scale requirements: a canonical parser for general use, a fast-read mode with field-selective extraction and frame-based caching for large catalogs, and a Mata-based bulk parser that produces wide-format output via the \texttt{collapse} option with filter controls (\texttt{colfields}, \texttt{maxlevel}). The \texttt{indicators} preset provides one-step parsing of wbopendata and unicefdata indicator metadata. We illustrate applications in SDMX-based indicator metadata management, YAML-driven survey microdata harmonization, and configuration validation in automated pipelines.
 \keywords{\inserttag, yaml, reproducible research, metadata, configuration management, cross-platform workflows}
 \end{abstract}
 
@@ -232,7 +232,8 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
 . yaml read using filename [, frame(name) locals scalars
       prefix(string) replace verbose fastread fields(string)
       listkeys(string) cache(string) targets(string) earlyexit
-      stream index(string) blockscalars bulk collapse strl]
+      stream index(string) blockscalars bulk collapse
+      colfields(string) maxlevel(#) indicators strl]
 \end{verbatim}
 
 \textbf{Core options}
@@ -262,10 +263,13 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
     \item \texttt{index(string)} materializes an auxiliary index frame for faster repeated lookups (Stata~16+).
 \end{itemize}
 
-\textbf{Phase~2 options} (high-performance Mata parser)
+\textbf{High-performance options} (Mata-based parser)
 \begin{itemize}
     \item \texttt{bulk} activates the Mata-based bulk parser, which loads the entire file into memory for vectorized processing. This provides substantial performance gains on large files.
-    \item \texttt{collapse} produces wide-format output with one row per top-level key. After parsing with \texttt{bulk}, run the \texttt{\_yaml\_collapse} helper to reshape the data into a format where each indicator (or top-level entry) occupies a single row with fields as columns.
+    \item \texttt{collapse} produces wide-format output with one row per top-level key, where each field becomes a column. Used with \texttt{bulk}.
+    \item \texttt{colfields(string)} filters collapsed output to specific field names (semicolon-separated). For example, \texttt{colfields(code;name;source\_id)} retains only those three columns.
+    \item \texttt{maxlevel(\#)} limits collapsed columns by nesting depth. Level~1 includes fields with no underscores; level~2 adds one underscore, and so on.
+    \item \texttt{indicators} preset for wbopendata/unicefdata indicator metadata. Implies \texttt{bulk collapse} with a standard \texttt{colfields()} selection covering common metadata fields (code, name, source\_id, description, unit, topic\_ids, topic\_names, note, limited\_data).
     \item \texttt{strl} stores values as \texttt{strL} instead of \texttt{str2000}, allowing arbitrarily long values (useful for embedded documentation or description blocks).
 \end{itemize}
 
@@ -281,11 +285,15 @@ The \texttt{yaml read} subcommand reads a YAML file and parses its contents into
       fields(name description source_id)
 (733 entries read in fast-read mode)
 
-. yaml read using "indicators.yaml", bulk blockscalars strl replace
-(29,189 rows read via Mata bulk parser)
+. yaml read using "indicators.yaml", bulk collapse strl replace
+(830 indicators, wide format)
 
-. _yaml_collapse
-(collapsed to 830 indicators, wide format)
+. yaml read using "indicators.yaml", bulk collapse replace ///
+      colfields(code;name;source_id;description)
+(830 indicators, 4 fields)
+
+. yaml read using "unicef_indicators.yaml", indicators replace
+(830 indicators, wide format)
 \end{stlog}
 
 \textbf{Stored results}
@@ -574,6 +582,17 @@ A full indicator batch can be looped over easily:
 
 This pattern ensures that indicator definitions remain consistent across the entire workflow and across analytical languages.
 
+\textbf{One-step alternative.} For production use, the \texttt{indicators} preset provides a single-command shortcut that parses the entire catalog into a wide-format dataset:
+
+\begin{stlog}
+. yaml read using "unicef_indicators.yaml", indicators replace
+(830 indicators, wide format)
+
+. list key code name in 1/3
+\end{stlog}
+
+The preset automatically enables \texttt{bulk} and \texttt{collapse} with standard field selection, replacing the manual loop above when the full catalog is needed as a dataset rather than queried key-by-key.
+
 \subsection{Efficient metadata ingestion: Large catalogs with frames}
 
 While the preceding example illustrates simple indicator lookup, many data-production systems manage large metadata catalogs (often 700+ entries) that must be queried repeatedly. A naive approach—looping through entries and calling \texttt{yaml get} for each item—becomes slow at scale. This subsection illustrates an optimized pattern that leverages Stata's frame capability and direct dataset operations to achieve sub-second query performance on catalogs with thousands of entries.
@@ -660,19 +679,17 @@ The regex pattern \texttt{\^{}indicators\_[A-Za-z0-9\_]+\_dataflow\$} then match
 
 This pattern is now widely used in production systems (e.g., \texttt{unicefdata} v1.4.0) to filter 700+ indicator catalogs at scale while maintaining code clarity and reproducibility. It demonstrates how thoughtful integration of YAML with Stata's frame and command architecture can achieve substantial performance and maintainability gains in modern data-production workflows.
 
-\textbf{Scaling to production catalogs.} Real-world indicator registries operate at substantially larger scales. The \texttt{wbopendata} package \citep{azevedo2011wbopendata} maintains a catalog of approximately 29,000 World Bank indicators stored in YAML files exceeding 360,000 lines, while \texttt{unicefdata} \citep{azevedo2025unicefdata} provides access to 800+ UNICEF indicators. These catalogs benefit from the Phase~2 optimizations:
+\textbf{Scaling to production catalogs.} Real-world indicator registries operate at substantially larger scales. The \texttt{wbopendata} package \citep{azevedo2011wbopendata} maintains a catalog of approximately 29,000 World Bank indicators stored in YAML files exceeding 360,000 lines, while \texttt{unicefdata} \citep{azevedo2025unicefdata} provides access to 800+ UNICEF indicators. These catalogs benefit from the high-performance Mata parser:
 
 \begin{stlog}
-. yaml read using "wdi_catalog.yaml", frame(wdi) bulk collapse
-. frame wdi: count
-    29,189
+. yaml read using "wdi_catalog.yaml", indicators replace
+(29,189 indicators, wide format)
 
-. yaml read using "unicef_catalog.yaml", frame(unicef) bulk collapse strl
-. frame unicef: count
-    830
+. yaml read using "unicef_catalog.yaml", indicators replace
+(830 indicators, wide format)
 \end{stlog}
 
-The \texttt{bulk} option enables streaming tokenization that processes these large files without memory spikes, while \texttt{collapse} converts the flattened key-value pairs into a wide-format dataset suitable for direct querying. For catalogs with long description fields, the \texttt{strl} option stores values as strLs, avoiding Stata's 2,045-character string limit. This combination makes it practical to load, filter, and query indicator metadata at scales previously impractical in Stata. To ensure that future \texttt{yaml} updates do not break these production workflows, compatibility tests covering frame-based query patterns are maintained as part of the QA framework (see Appendix~\ref{sec:qa}).
+The \texttt{indicators} preset automatically enables \texttt{bulk} and \texttt{collapse} with a standard \texttt{colfields()} selection covering the most common metadata fields. For custom field selection, the \texttt{colfields()} and \texttt{maxlevel()} options provide fine-grained control over which columns appear in the collapsed output. The \texttt{strl} option stores values as strLs for catalogs with long description fields, avoiding Stata's 2,045-character string limit. This combination makes it practical to load, filter, and query indicator metadata at scales previously impractical in Stata. To ensure that future \texttt{yaml} updates do not break these production workflows, compatibility tests covering frame-based query patterns are maintained as part of the QA framework (see Appendix~\ref{sec:qa}).
 
 \subsection{YAML-driven microdata harmonization}
 \label{sec:microdata}
@@ -963,7 +980,7 @@ The design also resonates with \citet{knuth84}'s principles of literate programm
 
 The current implementation has limitations. The canonical parser deliberately targets only the JSON-schema subset of the YAML~1.2 specification (Chapter~10.2). Advanced features such as anchors, aliases, explicit type tags, and flow-style mappings are not supported. Block scalars (\texttt{|} and \texttt{>}) are supported in both fast-read mode (via the \texttt{blockscalars} option) and in the canonical parser. Parsing relies on indentation rules, so malformed YAML results in structured, human-readable error messages rather than partial recovery. The fast-read parser is optimized for shallow two-level mappings and list blocks; deeply nested or irregular structures should use the canonical parser. These constraints reflect a deliberate focus on simplicity, predictability, and reproducibility for configuration files, even though they may limit applicability to more complex or free-form YAML documents.
 
-In practice, YAML configuration files used in UNICEF and similar analytical pipelines range from modest (tens of keys) to large (700+ indicator entries). On small files, parsing and frame creation typically complete in well under a second on standard hardware. For large metadata catalogs, the fast-read mode with field-selective extraction and frame-based caching provides near-linear performance, enabling sub-second ingestion of files with hundreds of entries. The Phase~2 Mata-based bulk parser (\texttt{bulk} option) provides additional performance gains by loading the entire file into memory and using vectorized Mata operations; on catalogs with 800+ indicators, it achieves parsing times under two seconds. The \texttt{collapse} option then reshapes this output into a wide format suitable for direct querying with standard Stata commands. The canonical parser also offers targeted parsing (\texttt{targets()} with \texttt{earlyexit}) and streaming tokenization (\texttt{stream}) for improved performance on large files without switching to the fast-read schema. The implementation does not depend on external libraries, so performance scales approximately with the number of keys and lines in the YAML file.
+In practice, YAML configuration files used in UNICEF and similar analytical pipelines range from modest (tens of keys) to large (700+ indicator entries). On small files, parsing and frame creation typically complete in well under a second on standard hardware. For large metadata catalogs, the fast-read mode with field-selective extraction and frame-based caching provides near-linear performance, enabling sub-second ingestion of files with hundreds of entries. The Mata-based bulk parser (\texttt{bulk} option) provides additional performance gains by loading the entire file into memory and using vectorized Mata operations; on catalogs with 800+ indicators, it achieves parsing times under two seconds. The \texttt{collapse} option then reshapes this output into a wide format suitable for direct querying with standard Stata commands. The canonical parser also offers targeted parsing (\texttt{targets()} with \texttt{earlyexit}) and streaming tokenization (\texttt{stream}) for improved performance on large files without switching to the fast-read schema. The implementation does not depend on external libraries, so performance scales approximately with the number of keys and lines in the YAML file.
 
 An alternative approach is to rely on Stata’s integration with external languages (for example, calling PyYAML via \texttt{python}) or to constrain configuration to JSON only. These strategies can be effective in some settings but introduce external dependencies, complicate deployment in secure or server-based environments, and limit the ability to inspect or edit configuration directly from within Stata. The \texttt{yaml} command complements such approaches by providing a native interface to a widely used configuration language while maintaining maximal portability.
 
@@ -979,8 +996,9 @@ Future extensions could include:
 
 \begin{itemize}
     \item helper tools for emitting YAML variants tailored to specific infrastructures (such as GitHub Actions or Quarto metadata blocks);
-    \item interactive tools for inspecting or editing YAML directly within Stata; and
-    \item integration with frame-based query operations for wbopendata-style indicator discovery.
+    \item schema validation against user-defined constraints for configuration auditing;
+    \item YAML diff and compare operations for tracking configuration changes across environments; and
+    \item interactive tools for inspecting or editing YAML directly within Stata.
 \end{itemize}
 
 These enhancements would further strengthen Stata’s interoperability with configuration-driven pipelines and expand the scope of workflows that can be expressed natively in YAML.
@@ -991,7 +1009,7 @@ These enhancements would further strengthen Stata’s interoperability with conf
 
 As analytical pipelines increasingly span multiple programming environments, the ability to consume and generate human-readable configuration files has become essential for reproducible research. YAML has emerged as a standard configuration language across data science, underpinning workflows in R, Python, Quarto, DevOps systems, and cloud infrastructure. The \texttt{yaml} command introduced in this article brings this capability to Stata in a lightweight and dependency-free manner.
 
-The unified subcommand architecture\textemdash comprising \texttt{read}, \texttt{write}, \texttt{describe}, \texttt{list}, \texttt{get}, \texttt{validate}, \texttt{dir}, \texttt{frames}, and \texttt{clear}\textemdash provides a comprehensive yet coherent interface for working with YAML files. Version~1.7.0 extends this foundation with a high-performance Mata-based bulk parser, wide-format output via the \texttt{collapse} option, and \texttt{strL} storage for arbitrarily long values. This design allows analysts to externalize configuration parameters, metadata structures, and validation rules, thereby improving reproducibility, transparency, and auditability within statistical workflows. Stata scripts can now participate seamlessly in multi-language pipelines, consume configuration artifacts shared across tools, and even update pipeline metadata programmatically.
+The unified subcommand architecture\textemdash comprising \texttt{read}, \texttt{write}, \texttt{describe}, \texttt{list}, \texttt{get}, \texttt{validate}, \texttt{dir}, \texttt{frames}, and \texttt{clear}\textemdash provides a comprehensive yet coherent interface for working with YAML files. Version~1.9.0 extends this foundation with a high-performance Mata-based bulk parser, wide-format output via the \texttt{collapse} option, collapse filter options (\texttt{colfields}, \texttt{maxlevel}), an \texttt{indicators} preset for one-step metadata ingestion, and \texttt{strL} storage for arbitrarily long values. This design allows analysts to externalize configuration parameters, metadata structures, and validation rules, thereby improving reproducibility, transparency, and auditability within statistical workflows. Stata scripts can now participate seamlessly in multi-language pipelines, consume configuration artifacts shared across tools, and even update pipeline metadata programmatically.
 
 By enabling Stata to interoperate directly with YAML-based workflows, the \texttt{yaml} command strengthens its role in interdisciplinary analytical ecosystems and supports good statistical governance practices, including those emphasized by the United Nations Fundamental Principles of Official Statistics. The approach facilitates cleaner metadata management, more flexible and maintainable pipeline design, and more consistent results across platforms—an increasingly important requirement in collaborative empirical research.
 
@@ -1031,9 +1049,9 @@ The QA system comprises four test families covering distinct aspects of function
 ENV   & Environment    & 3  & Module installation and discoverability \\
 EX    & Examples       & 3  & Smoke tests for core workflows \\
 REG   & Regression     & 8  & Bug-fix validation \\
-FEAT  & Features       & 8  & New functionality validation \\
+FEAT  & Features       & 9  & New functionality validation \\
 \hline
-      & \textbf{Total} & 22 & \\
+      & \textbf{Total} & 23 & \\
 \hline
 \end{tabular}
 \end{center}
@@ -1044,7 +1062,7 @@ Tests are executed via a unified runner:
 
 \begin{stlog}
 . cd C:/GitHub/myados/yaml-dev/qa
-. do run_tests.do         // Full suite (22 tests)
+. do run_tests.do         // Full suite (23 tests)
 . do run_tests.do FEAT-08 // Single test
 . do run_tests.do list    // List available tests
 \end{stlog}
@@ -1055,7 +1073,7 @@ The runner produces structured logs in \texttt{qa/logs/} and appends results to 
 
 \textbf{Regression tests} (REG-01 through REG-08) target specific bug fixes, ensuring that resolved issues do not reoccur. Each regression test references a documented bug identifier and includes both the failing case and the expected correct behavior.
 
-\textbf{Feature tests} (FEAT-01 through FEAT-08) validate new capabilities introduced in v1.6.0 and later. FEAT-08 alone contains 15 sub-tests covering frame-based query patterns used in production by \texttt{wbopendata} and \texttt{unicefdata}. These tests serve as a compatibility contract: they ensure that future updates to the \texttt{yaml} module will not break the required functionality of these downstream packages, which depend on specific parsing behaviors and frame operations for managing large indicator catalogs:
+\textbf{Feature tests} (FEAT-01 through FEAT-09) validate new capabilities introduced in v1.6.0 and later. FEAT-08 alone contains 15 sub-tests covering frame-based query patterns used in production by \texttt{wbopendata} and \texttt{unicefdata}. These tests serve as a compatibility contract: they ensure that future updates to the \texttt{yaml} module will not break the required functionality of these downstream packages, which depend on specific parsing behaviors and frame operations for managing large indicator catalogs:
 
 \begin{itemize}
     \item Bulk parse with \texttt{bulk} + \texttt{collapse} options
@@ -1068,7 +1086,7 @@ The runner produces structured logs in \texttt{qa/logs/} and appends results to 
 
 \subsection{Results summary}
 
-As of v1.7.0, all 22 tests pass on Stata 17+ and Stata 18. Frame-dependent tests (REG-02, FEAT-08) require Stata~16+; they are automatically skipped on earlier versions with appropriate warnings.
+As of v1.9.0, all 23 tests pass on Stata 17+ and Stata 18. Frame-dependent tests (REG-02, FEAT-08) require Stata~16+; they are automatically skipped on earlier versions with appropriate warnings.
 
 \begin{center}
 \begin{tabular}{lcc}
@@ -1078,9 +1096,9 @@ As of v1.7.0, all 22 tests pass on Stata 17+ and Stata 18. Frame-dependent tests
 ENV  & 3 & 3 \\
 EX   & 3 & 3 \\
 REG  & 8 & 8 \\
-FEAT & 8 & 8 \\
+FEAT & 9 & 9 \\
 \hline
-\textbf{All} & \textbf{22} & \textbf{22} \\
+\textbf{All} & \textbf{23} & \textbf{23} \\
 \hline
 \end{tabular}
 \end{center}
@@ -1099,6 +1117,7 @@ The test suite uses purpose-built YAML fixtures stored in \texttt{qa/fixtures/}.
 \texttt{block\_scalars.yaml} & Literal (\texttt{|}) and folded (\texttt{>}) block syntax \\
 \texttt{brackets\_in\_values.yaml} & REG-06: \texttt{[]} and \texttt{\{\}} preserved in values \\
 \texttt{collapse\_test.yaml} & Wide-format \texttt{collapse} option output \\
+\texttt{collapse\_colfields\_test.yaml} & FEAT-09: \texttt{colfields()} and \texttt{maxlevel()} filtering \\
 \texttt{continuation\_lines.yaml} & Multi-line string handling \\
 \texttt{embedded\_quotes.yaml} & FEAT-01: double quotes via Mata \\
 \texttt{long\_values.yaml} & FEAT-04: strL truncation prevention \\
