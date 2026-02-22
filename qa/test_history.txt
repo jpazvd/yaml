@@ -442,3 +442,77 @@ Skipped:   0
 Result:    ALL TESTS PASSED
 Log:       run_tests.log
 ======================================================================
+
+======================================================================
+Test Run:  21 Feb 2026
+Started:   18:56:43
+Ended:     19:00:14
+Duration:  3m 31s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 25 passed, 2 failed
+Skipped:   0
+Result:    FAILED
+Failed:     REG-09 INT-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  21 Feb 2026
+Started:   19:00:19
+Ended:     19:04:29
+Duration:  4m 10s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 25 passed, 2 failed
+Skipped:   0
+Result:    FAILED
+Failed:     REG-09 INT-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  22 Feb 2026
+Started:   11:15:38
+Ended:     11:17:37
+Duration:  1m 59s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 26 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     REG-09
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  22 Feb 2026
+Started:   12:37:28
+Ended:     12:40:04
+Duration:  2m 36s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 26 passed, 1 failed
+Skipped:   0
+Result:    FAILED
+Failed:     INT-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  22 Feb 2026
+Started:   12:44:24
+Ended:     12:47:29
+Duration:  3m 5s
+Branch:    qa/regres
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 27 passed, 0 failed
+Skipped:   0
+Result:    ALL TESTS PASSED
+Log:       run_tests.log
+======================================================================

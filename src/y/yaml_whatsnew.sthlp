@@ -1,7 +1,8 @@
 {smcl}
-{* *! version 1.9.0  20Feb2026}{...}
+{* *! version 1.9.2  22Feb2026}{...}
 {vieweralsosee "yaml" "help yaml"}{...}
 {vieweralsosee "yaml examples" "help yaml_examples"}{...}
+{viewerjumpto "v1.9.2" "yaml_whatsnew##v192"}{...}
 {viewerjumpto "v1.9.0" "yaml_whatsnew##v190"}{...}
 {viewerjumpto "v1.8.0" "yaml_whatsnew##v180"}{...}
 {viewerjumpto "v1.7.0" "yaml_whatsnew##v170"}{...}
@@ -11,13 +12,31 @@
 {viewerjumpto "v1.4.0" "yaml_whatsnew##v140"}{...}
 {viewerjumpto "v1.3.1" "yaml_whatsnew##v131"}{...}
 {hline}
-{cmd:help yaml what's new}{right:{bf:version 1.9.0}}
+{cmd:help yaml what's new}{right:{bf:version 1.9.2}}
 {hline}
 
 {title:What's New in yaml}
 
 {pstd}
 {it:Return to {help yaml:main help file}}
+{p_end}
+
+
+{marker v192}{...}
+{title:Version 1.9.2 (22Feb2026) {hline 2} Parser parity fixes}
+
+{pstd}
+{bf:List-item quote stripping} {hline 2} The canonical parser now strips surrounding
+quotes from YAML list item values, matching the Mata bulk parser behavior.
+Previously, values like {cmd:"Climate Change"} retained their quotes in canonical
+mode but not in bulk mode.
+{p_end}
+
+{pstd}
+{bf:Sibling parent_stack fix} {hline 2} Fixed parent_stack contamination where
+adjacent parent keys at the same indent level (e.g., {cmd:topic_ids:} followed by
+{cmd:topic_names:}) could produce incorrect field names. Both canonical and Mata
+bulk parsers now correctly restore the parent context for sibling keys.
 {p_end}
 
 

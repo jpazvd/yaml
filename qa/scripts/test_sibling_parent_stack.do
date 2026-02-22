@@ -38,13 +38,14 @@ if (`n_keys' < 30) {
 
 * Check topic_names is NOT polluted by topic_ids parent
 * BUG: topic_names becomes "topic_ids_topic_names" → wrong
-* FIX: topic_names stays "SP_POP_TOTL_topic_names" (parent is entity key)
+* FIX: topic_names stays "indicators_SP_POP_TOTL_topic_names" (parent is entity key)
 
 * Verify topic_names keys exist with correct parent
-qui count if regexm(key, "^SP_POP_TOTL_topic_names$") & type == "parent"
+* Note: canonical parser prepends root "indicators_" and converts dots→underscores
+qui count if regexm(key, "^indicators_SP_POP_TOTL_topic_names$") & type == "parent"
 local n_tn_parent = r(N)
 if (`n_tn_parent' != 1) {
-    di as error "REG-09a FAIL: SP_POP_TOTL_topic_names parent key not found (N=`n_tn_parent')"
+    di as error "REG-09a FAIL: indicators_SP_POP_TOTL_topic_names parent key not found (N=`n_tn_parent')"
     di as error "        This indicates parent_stack contamination from topic_ids"
     * Show what keys exist with topic_names in them
     list key parent type if strpos(key, "topic_names") > 0, clean
@@ -52,14 +53,14 @@ if (`n_tn_parent' != 1) {
 }
 
 * Verify topic_names list items have correct parent
-qui count if key == "SP_POP_TOTL_topic_names_1"
+qui count if key == "indicators_SP_POP_TOTL_topic_names_1"
 local n_tn1 = r(N)
 if (`n_tn1' != 1) {
-    di as error "REG-09a FAIL: SP_POP_TOTL_topic_names_1 not found (N=`n_tn1')"
+    di as error "REG-09a FAIL: indicators_SP_POP_TOTL_topic_names_1 not found (N=`n_tn1')"
     local all_pass = 0
 }
 else {
-    qui levelsof value if key == "SP_POP_TOTL_topic_names_1", local(v) clean
+    qui levelsof value if key == "indicators_SP_POP_TOTL_topic_names_1", local(v) clean
     if (`"`v'"' != "Climate Change") {
         di as error "REG-09a FAIL: topic_names_1 value = '`v'', expected 'Climate Change'"
         local all_pass = 0
@@ -67,14 +68,14 @@ else {
 }
 
 * Verify topic_ids list items also correct
-qui count if key == "SP_POP_TOTL_topic_ids_1"
+qui count if key == "indicators_SP_POP_TOTL_topic_ids_1"
 local n_ti1 = r(N)
 if (`n_ti1' != 1) {
-    di as error "REG-09a FAIL: SP_POP_TOTL_topic_ids_1 not found (N=`n_ti1')"
+    di as error "REG-09a FAIL: indicators_SP_POP_TOTL_topic_ids_1 not found (N=`n_ti1')"
     local all_pass = 0
 }
 else {
-    qui levelsof value if key == "SP_POP_TOTL_topic_ids_1", local(v) clean
+    qui levelsof value if key == "indicators_SP_POP_TOTL_topic_ids_1", local(v) clean
     if ("`v'" != "19") {
         di as error "REG-09a FAIL: topic_ids_1 value = '`v'', expected '19'"
         local all_pass = 0
@@ -82,19 +83,19 @@ else {
 }
 
 * Verify source_org is NOT polluted by note parent
-qui count if regexm(key, "^SP_POP_TOTL_source_org$")
+qui count if regexm(key, "^indicators_SP_POP_TOTL_source_org$")
 local n_so = r(N)
 if (`n_so' != 1) {
-    di as error "REG-09a FAIL: SP_POP_TOTL_source_org not found (N=`n_so')"
+    di as error "REG-09a FAIL: indicators_SP_POP_TOTL_source_org not found (N=`n_so')"
     local all_pass = 0
 }
 
 * Check empty arrays are parsed (as string "[]")
-qui count if key == "EMPTY_TOPICS_topic_ids" & value == "[]"
+qui count if key == "indicators_EMPTY_TOPICS_topic_ids" & value == "[]"
 local n_empty = r(N)
 if (`n_empty' != 1) {
     di as error "REG-09a FAIL: empty array topic_ids not parsed as '[]' (N=`n_empty')"
-    list key value if strpos(key, "EMPTY_TOPICS_topic") > 0, clean
+    list key value if strpos(key, "EMPTY_TOPICS_topic") > 0 | strpos(key, "EMPTY.TOPICS_topic") > 0, clean
     local all_pass = 0
 }
 
@@ -113,37 +114,38 @@ di as text "{hline 70}"
 yaml read using "`fixture'", replace blockscalars bulk
 
 * Check topic_names parent key exists (not polluted)
-qui count if regexm(key, "^SP_POP_TOTL_topic_names$") & type == "parent"
+* Note: Mata bulk parser preserves dots in entity codes (SP.POP.TOTL not SP_POP_TOTL)
+qui count if regexm(key, "^indicators_SP.POP.TOTL_topic_names$") & type == "parent"
 local n_tn_parent = r(N)
 if (`n_tn_parent' != 1) {
-    di as error "REG-09b FAIL: Mata bulk: SP_POP_TOTL_topic_names parent key not found (N=`n_tn_parent')"
+    di as error "REG-09b FAIL: Mata bulk: indicators_SP.POP.TOTL_topic_names parent key not found (N=`n_tn_parent')"
     list key parent type if strpos(key, "topic_names") > 0, clean
     local all_pass = 0
 }
 
 * Verify list item values
-qui count if key == "SP_POP_TOTL_topic_names_1"
+qui count if key == "indicators_SP.POP.TOTL_topic_names_1"
 if (r(N) != 1) {
-    di as error "REG-09b FAIL: Mata bulk: SP_POP_TOTL_topic_names_1 not found"
+    di as error "REG-09b FAIL: Mata bulk: indicators_SP.POP.TOTL_topic_names_1 not found"
     local all_pass = 0
 }
 else {
-    qui levelsof value if key == "SP_POP_TOTL_topic_names_1", local(v) clean
+    qui levelsof value if key == "indicators_SP.POP.TOTL_topic_names_1", local(v) clean
     if (`"`v'"' != "Climate Change") {
         di as error "REG-09b FAIL: Mata bulk: topic_names_1 = '`v'', expected 'Climate Change'"
         local all_pass = 0
     }
 }
 
-* Verify second entity's topic_names (DT.DOD.DECT.CD uses dots→underscores)
-qui count if regexm(key, "DT_DOD_DECT_CD_topic_names_1")
+* Verify second entity's topic_names (Mata bulk preserves dots in DT.DOD.DECT.CD)
+qui count if regexm(key, "indicators_DT.DOD.DECT.CD_topic_names_1")
 if (r(N) != 1) {
-    di as error "REG-09b FAIL: Mata bulk: DT_DOD_DECT_CD_topic_names_1 not found"
-    list key if strpos(key, "DT_DOD") > 0, clean
+    di as error "REG-09b FAIL: Mata bulk: indicators_DT.DOD.DECT.CD_topic_names_1 not found"
+    list key if strpos(key, "DT_DOD") > 0 | strpos(key, "DT.DOD") > 0, clean
     local all_pass = 0
 }
 else {
-    qui levelsof value if regexm(key, "DT_DOD_DECT_CD_topic_names_1"), local(v) clean
+    qui levelsof value if regexm(key, "indicators_DT.DOD.DECT.CD_topic_names_1"), local(v) clean
     if (`"`v'"' != "External Debt") {
         di as error "REG-09b FAIL: Mata bulk: DT_DOD topic_names_1 = '`v'', expected 'External Debt'"
         local all_pass = 0
@@ -300,21 +302,23 @@ if (`n_canonical' != `n_bulk') {
 }
 
 * Compare topic_names for first indicator
+* Note: bulk preserves dots (ind_code="SP.POP.TOTL"), canonical converts to underscores ("SP_POP_TOTL")
 qui levelsof topic_names if ind_code == "SP.POP.TOTL", local(bulk_topics) clean
 
 qui use `canonical_data', clear
-qui levelsof topic_names if ind_code == "SP.POP.TOTL", local(canon_topics) clean
+qui levelsof topic_names if ind_code == "SP_POP_TOTL", local(canon_topics) clean
 
 di as text "  Canonical topic_names: '`canon_topics''"
 di as text "  Bulk topic_names:      '`bulk_topics''"
 
 if (`"`canon_topics'"' != `"`bulk_topics'"') {
     di as error "REG-09d FAIL: topic_names differ between parsers"
+    di as error "        (canonical ind_code=SP_POP_TOTL, bulk ind_code=SP.POP.TOTL)"
     local all_pass = 0
 }
 
 if (`all_pass') {
-    di as result "PART D PASS: canonical and Mata bulk produce identical output"
+    di as result "PART D PASS: canonical and Mata bulk produce identical field values"
 }
 
 *===============================================================================

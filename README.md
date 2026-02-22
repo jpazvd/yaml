@@ -3,7 +3,7 @@
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
 [![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.9.0-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v1.9.0)
+[![Version](https://img.shields.io/badge/version-1.9.2-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v1.9.2)
 
 ## Description
 
@@ -11,7 +11,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** [v1.9.0](https://github.com/jpazvd/yaml/releases/tag/v1.9.0) with `indicators` preset for wbopendata/unicefdata, `colfields()` and `maxlevel()` filtering, and Mata bulk-load parser.
+**Latest:** [v1.9.2](https://github.com/jpazvd/yaml/releases/tag/v1.9.2) with parser parity fixes (list-item quote stripping, sibling parent_stack), `indicators` preset, `colfields()` and `maxlevel()` filtering, and Mata bulk-load parser.
 
 ### Key Features
 
