@@ -1,4 +1,4 @@
-v 1.9.0
+v 1.9.2
 d 'YAML': Stata module for YAML file processing
 d 
 d yaml is a unified Stata command for reading, writing, and manipulating
@@ -11,7 +11,7 @@ d KW: parsing
 d 
 d Requires: Stata version 14
 d 
-d Distribution-Date: 20260220
+d Distribution-Date: 20260222
 d License: MIT
 d 
 d Author: João Pedro Azevedo
