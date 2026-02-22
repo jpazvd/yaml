@@ -1,7 +1,9 @@
 *******************************************************************************
 * yaml_read
-*! v 1.9.0   20Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 1.9.2   22Feb2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
+* v1.9.2: Strip quotes from list item values in canonical parser (parity with Mata bulk)
+* v1.9.1: Fix parent_stack contamination for sibling keys; add source_org to indicators preset
 * v1.9.0: INDICATORS preset for wbopendata/unicefdata indicator metadata
 * v1.8.0: collapse fields() and maxlevel() options for selective columns
 * v1.7.0: Mata bulk-load (BULK), collapsed wide-format output (COLLAPSE)
@@ -23,7 +25,7 @@ program define yaml_read, rclass
         local collapse "collapse"
         * Use standard indicator metadata fields if colfields not specified
         if ("`colfields'" == "") {
-            local colfields "code;name;source_id;source_name;description;unit;topic_ids;topic_names;note;limited_data"
+            local colfields "code;name;source_id;source_name;description;unit;topic_ids;topic_names;source_org;note;limited_data"
         }
     }
     
@@ -493,7 +495,14 @@ program define yaml_read, rclass
             local parent_stack "`parent_`found_level''"
             local n_levels = `found_level'
         }
-        * If indent == current_indent, we're at sibling - parent_stack stays same
+        else {
+            * Same indent = sibling. Restore parent_stack for non-list
+            * key-value pairs so a preceding parent key (e.g. topic_ids:)
+            * does not contaminate its sibling (e.g. topic_names:).
+            if (substr(`"`trimmed'"', 1, 2) != "- ") {
+                local parent_stack "`parent_`n_levels''"
+            }
+        }
         local current_indent = `indent'
         
         * Calculate level for display
@@ -508,7 +517,12 @@ program define yaml_read, rclass
         if (`is_list') {
             * List item - store as separate row with type "list_item"
             local item_value = strtrim(substr(`"`trimmed'"', 3, .))
-            
+
+            * Remove quotes from list item value (matches Mata bulk parser)
+            if (substr(`"`item_value'"', 1, 1) == `"""' | substr(`"`item_value'"', 1, 1) == "'") {
+                local item_value = substr(`"`item_value'"', 2, length(`"`item_value'"') - 2)
+            }
+
             * Increment list index for this parent
             local list_index = `list_index' + 1
             
