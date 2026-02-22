@@ -442,3 +442,33 @@ Skipped:   0
 Result:    ALL TESTS PASSED
 Log:       run_tests.log
 ======================================================================
+
+======================================================================
+Test Run:  21 Feb 2026
+Started:   18:56:43
+Ended:     19:00:14
+Duration:  3m 31s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 25 passed, 2 failed
+Skipped:   0
+Result:    FAILED
+Failed:     REG-09 INT-03
+Log:       run_tests.log
+======================================================================
+
+======================================================================
+Test Run:  21 Feb 2026
+Started:   19:00:19
+Ended:     19:04:29
+Duration:  4m 10s
+Branch:    main
+Version:   1.9.0
+Stata:     17
+Tests:     27 run, 25 passed, 2 failed
+Skipped:   0
+Result:    FAILED
+Failed:     REG-09 INT-03
+Log:       run_tests.log
+======================================================================
