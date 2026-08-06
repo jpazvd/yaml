@@ -1,8 +1,7 @@
-*! yaml_sj_article_examples.do
-*! End-to-end worked examples for the yaml command
-*! "Reading and writing YAML files in Stata"
+*! yaml_workflow_examples.do
+*! End-to-end worked examples for the yaml command: reading, writing,
+*! validating and harmonizing YAML metadata in a reproducible workflow.
 *! Author: João Pedro Azevedo
-*! Date: December 2025
 
 * ==============================================================================
 * INTRODUCTION
@@ -41,7 +40,7 @@ cap cd "cd <repo-root>"
 run "src/y/yaml.ado"
 
 * Start log
-log using "examples/yaml_sj_article_examples.log", replace text
+log using "examples/yaml_workflow_examples.log", replace text
 
 * Display header
 display _n

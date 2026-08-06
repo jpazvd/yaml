@@ -531,9 +531,9 @@ yaml/
 
 ## Design Principles
 
-1. **YAML 1.2 Subset**: Implements the most commonly used YAML features that cover 95%+ of configuration use cases.
+1. **YAML 1.2 Subset**: Implements a restricted block-style subset of YAML 1.2 covering the features most commonly used in configuration files.
 
-2. **JSON Compatibility**: The supported subset is fully JSON-compatible, enabling easy data exchange.
+2. **Block-style focus**: Flow-style (JSON-like) collections, anchors, aliases, and tags are not parsed; the constructs fast-read detects fail explicitly with an error, and the rest is stored as inspectable literal text.
 
 3. **Stata-Native**: Pure Stata implementation using `file read/write` - no external dependencies.
 

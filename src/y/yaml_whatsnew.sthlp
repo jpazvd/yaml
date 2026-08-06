@@ -1,7 +1,8 @@
 {smcl}
-{* *! version 1.9.2  22Feb2026}{...}
+{* *! version 2.0.0  26Jul2026}{...}
 {vieweralsosee "yaml" "help yaml"}{...}
 {vieweralsosee "yaml examples" "help yaml_examples"}{...}
+{viewerjumpto "v2.0.0" "yaml_whatsnew##v200"}{...}
 {viewerjumpto "v1.9.2" "yaml_whatsnew##v192"}{...}
 {viewerjumpto "v1.9.0" "yaml_whatsnew##v190"}{...}
 {viewerjumpto "v1.8.0" "yaml_whatsnew##v180"}{...}
@@ -12,13 +13,77 @@
 {viewerjumpto "v1.4.0" "yaml_whatsnew##v140"}{...}
 {viewerjumpto "v1.3.1" "yaml_whatsnew##v131"}{...}
 {hline}
-{cmd:help yaml what's new}{right:{bf:version 1.9.2}}
+{cmd:help yaml what's new}{right:{bf:version 2.0.0}}
 {hline}
 
 {title:What's New in yaml}
 
 {pstd}
 {it:Return to {help yaml:main help file}}
+{p_end}
+
+
+{marker v200}{...}
+{title:Version 2.0.0 (26Jul2026)}
+
+{pstd}
+{bf:Sequences of mappings} {hline 2} The canonical parser now supports list
+items that are themselves mappings ({cmd:- key: value} with further keys
+nested under the item), in either indentation style {hline 2} the {cmd:-}
+written flush with the parent key (the default emitted by many YAML writers)
+or indented beneath it {hline 2} as used by harmonization maps and CI
+configuration. Each item is stored as a structural row {it:list}_N (type
+{cmd:list_map}) with its keys as children; {cmd:yaml write} regenerates the
+dash form; nested mappings under items are supported. The {cmd:bulk} and
+{cmd:fastread} parsers reject such items with an explicit error.
+{p_end}
+
+{pstd}
+{bf:Colon paths} {hline 2} {cmd:yaml get} and {cmd:yaml list} accept
+multi-level colon paths: {cmd:a:b:c} addresses the flattened key {cmd:a_b_c};
+the parent/key split is made at the last colon.
+{p_end}
+
+{pstd}
+{bf:One quoting rule} {hline 2} In all parse modes, surrounding quotes are
+stripped only when the first and last characters are the same quote
+character; quoted values are always typed string; escape sequences are kept
+literal.
+{p_end}
+
+{pstd}
+{bf:Write fidelity} {hline 2} {cmd:yaml write} emits boolean rows as
+{cmd:true}/{cmd:false} and null rows as an empty value, so a read-write
+cycle preserves YAML literals.
+{p_end}
+
+{pstd}
+{bf:Reproducible output} {hline 2} {cmd:yaml write} no longer stamps a
+wall-clock {cmd:# Date:} line in the header by default, so a written file is
+byte-for-byte reproducible across runs. The new {opt timestamp} option
+restores the date line, and {opt noheader} omits the header comment entirely.
+{p_end}
+
+{pstd}
+{bf:Fixes} {hline 2} {cmd:yaml describe} now shows each row by its leaf name, so
+the tree mirrors the source file: a key under {cmd:database:} prints as
+{cmd:host:} rather than {cmd:database_host:}. The indentation already carries
+the path, so repeating the flattened prefix at every level was redundant.
+{cmd:yaml write, scalars()} now writes the named scalars:
+the existence guard was a bare {cmd:scalar} {it:name}, which is not a validity
+test and fails even when the scalar is defined, so every scalar was skipped and
+only the header was written. String scalars are emitted as well.
+The {opt stata} option of {cmd:yaml list} now returns a
+usable compound-quoted list: the final trim wrapped the quoted list in plain
+double quotes, collapsing {cmd:r(keys)}/{cmd:r(values)} to a single backtick, so
+a {cmd:foreach} over the result iterated once on an invalid name.
+{cmd:yaml list, children} again returns bare child
+names as documented (regression in the modular refactor); {cmd:noheader} is
+recognized again and now suppresses all output; the parent filter no longer
+ignores its argument; {cmd:yaml list} returns {cmd:r(found)}; scalar-leaf
+{cmd:yaml get} returns {cmd:r(value)}; fast-read {cmd:yaml read} returns
+{cmd:r(n_keys)}; a whole-node {cmd:yaml get} on a block sequence of scalars
+returns the space-joined items in {cmd:r(value)} instead of erroring.
 {p_end}
 
 

@@ -79,7 +79,7 @@ def extract_version(path: Path):  # -> Optional[str]
         m = RE_PKG.match(first)
         return m.group(1) if m else None
     elif ext == ".py":
-        return _scan(text, [RE_PYCOMMENT])
+        return _scan(text, [RE_PYCOMMENT, RE_PYVERSION])
     elif ext == ".r" or ext == ".R":
         return _scan(text, [RE_RCOMMENT])
     return None

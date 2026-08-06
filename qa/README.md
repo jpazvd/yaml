@@ -6,8 +6,8 @@ This folder contains QA protocols and scripts for validating the `yaml` Stata mo
 
 | Metric | Value |
 |--------|-------|
-| **Total Tests** | 22 |
-| **Test Families** | ENV, EX, REG, FEAT |
+| **Total Tests** | 27 |
+| **Test Families** | ENV, EX, REG, FEAT, INT |
 | **Runner** | `qa/run_tests.do` |
 | **Log file** | `qa/logs/run_tests.log` (gitignored) |
 | **History** | `qa/test_history.txt` |
@@ -55,7 +55,7 @@ Runs example scripts to validate core workflows.
 | EX-02 | `examples/test_yaml_improvements.do` |
 | EX-03 | `examples/yaml_basic_examples.do` |
 
-### 3. Regression Tests (REG) - 8 tests
+### 3. Regression Tests (REG) - 9 tests
 Targeted regression tests for specific bug fixes.
 
 | Test ID | Description | Bug Ref |
@@ -68,8 +68,9 @@ Targeted regression tests for specific bug fixes.
 | REG-06 | Fastread handles brackets/braces in values | BUG-6 |
 | REG-07 | Early-exit does not double-close file handle | BUG-7 |
 | REG-08 | `yaml list header` with parent filter | BUG-8 |
+| REG-09 | Sibling parent_stack contamination | BUG-9 |
 
-### 4. Feature Tests (FEAT) - 8 tests
+### 4. Feature Tests (FEAT) - 9 tests
 New feature validation for v1.6.0+ and Phase 2 (Mata parser).
 
 | Test ID | Description | Version |
@@ -82,6 +83,7 @@ New feature validation for v1.6.0+ and Phase 2 (Mata parser).
 | FEAT-06 | `collapse` option produces wide-format output | Phase 2 |
 | FEAT-07 | Performance comparison across parser modes | Phase 2 |
 | FEAT-08 | Frame-based query operations (wbopendata-style) | Phase 2 |
+| FEAT-09 | `colfields()` and `maxlevel()` collapse options | v1.8.0 |
 
 #### FEAT-08 Sub-tests (15 sub-tests)
 Validates frame caching and query patterns used by wbopendata/unicefData:
@@ -102,6 +104,16 @@ Validates frame caching and query patterns used by wbopendata/unicefData:
 14. **Regex wildcard `+`** - one or more pattern
 15. **Regex wildcard `.`** - single character pattern
 
+### 5. Integration Tests (INT) - 3 tests
+Cross-package integration with downstream consumers (skipped when the sibling
+repos are absent; INT-02/INT-03 fail while siblings bundle an older yaml).
+
+| Test ID | Description |
+|---------|-------------|
+| INT-01 | unicefdata yaml → cache integration |
+| INT-02 | wbopendata yaml → cache integration |
+| INT-03 | Cross-package yaml.ado version sync |
+
 ## Directory Structure
 
 | Directory | Contents |
@@ -110,7 +122,7 @@ Validates frame caching and query patterns used by wbopendata/unicefData:
 | `fixtures/` | Test fixtures and sample YAML files |
 | `legacy/` | Legacy QA artifacts kept for reference |
 | `logs/` | Execution logs (gitignored) |
-| `scripts/` | Test scripts (20 files) |
+| `scripts/` | Test scripts (22 files) |
 
 ## Entry Points
 

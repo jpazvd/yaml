@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_describe
-*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 * Display structure of loaded YAML data
 *******************************************************************************
 
@@ -53,33 +53,49 @@ program define _yaml_describe_impl
         local level = r(max)
     }
     
+    * parent is optional; when present it lets each row be shown by its leaf
+    * name so the tree mirrors the source file
+    capture confirm variable parent
+    local has_parent = (_rc == 0)
+
     local n = _N
     di as text "{hline 70}"
     di as text "YAML structure (showing up to level `level'):"
     di as text "{hline 70}"
-    
+
     forvalues i = 1/`n' {
         local k = key[`i']
         local v = value[`i']
         local l = level[`i']
         local t = type[`i']
-        
+
         * Skip if beyond requested level
         if (`l' > `level') continue
-        
+
         * Create indentation
         local spaces ""
         forvalues j = 1/`=`l'-1' {
             local spaces "`spaces'  "
         }
-        
+
+        * Display the leaf name, not the flattened key: the indentation already
+        * carries the path, so printing "database_host" under "database:" both
+        * repeats the parent and stops the tree from mirroring the YAML file.
+        local dk "`k'"
+        if (`has_parent') {
+            local p = parent[`i']
+            if ("`p'" != "" & strpos("`k'", "`p'_") == 1) {
+                local dk = substr("`k'", length("`p'") + 2, .)
+            }
+        }
+
         if ("`t'" == "parent") {
-            di as text "`spaces'" as result "`k'" as text ":"
+            di as text "`spaces'" as result "`dk'" as text ":"
         }
         else {
             local display_val = substr("`v'", 1, 40)
             if (length("`v'") > 40) local display_val "`display_val'..."
-            di as text "`spaces'" as result "`k'" as text ": " as text `"`display_val'"'
+            di as text "`spaces'" as result "`dk'" as text ": " as text `"`display_val'"'
         }
     }
     

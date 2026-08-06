@@ -1,0 +1,4 @@
+# Demonstration file shipped with the yaml package
+environment: production
+threads: 4
+verbose: false

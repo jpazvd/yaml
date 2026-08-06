@@ -3,15 +3,15 @@
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
 [![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.9.2-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v1.9.2)
+[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v2.0.0)
 
 ## Description
 
 `yaml` is a Stata command for reading, writing, and manipulating YAML configuration files. It provides a unified interface with nine subcommands that enable Stata users to integrate YAML-based workflows into their data pipelines.
 
-The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
+The command implements a **restricted block-style subset** of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** [v1.9.2](https://github.com/jpazvd/yaml/releases/tag/v1.9.2) with parser parity fixes (list-item quote stripping, sibling parent_stack), `indicators` preset, `colfields()` and `maxlevel()` filtering, and Mata bulk-load parser.
+**Latest:** [v2.0.0](https://github.com/jpazvd/yaml/releases/tag/v2.0.0) — sequences of mappings (`list_map`), unified quoting rule across all three parsers, `yaml write` boolean/null fidelity, multi-level colon paths in `yaml get`, and `r(found)` from `yaml list`.
 
 ### Key Features
 
@@ -40,7 +40,7 @@ ssc install yaml
 
 ### Manual Installation
 
-Copy `yaml.ado` and `yaml.sthlp` from `src/y/` to your personal ado directory:
+Copy the full package — all `.ado` and `.sthlp` files from `src/y/` and `src/_/` (see `src/yaml.pkg` for the list) — to your personal ado directory:
 
 ```stata
 adopath
@@ -276,7 +276,7 @@ YAML data is stored in a flat dataset with hierarchical references:
 | `value` | str2000 | The value associated with the key |
 | `level` | int | Nesting depth (1 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
-| `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
+| `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `list_map`, `null` |
 
 ### Fast-Read Output Schema
 
@@ -334,11 +334,11 @@ countries_2     ARG     countries   list_item
 countries_3     CHL     countries   list_item
 ```
 
-## YAML 1.2 Compliance
+## YAML 1.2 subset
 
-This command implements the **JSON Schema** subset of YAML 1.2 as defined in [Chapter 10.2](https://yaml.org/spec/1.2.2/#json-schema) of the YAML 1.2 Specification. This is the recommended schema for "interoperability and consistency" according to the specification.
+This command implements a **restricted block-style subset** of YAML 1.2 suitable for configuration files. (The YAML 1.2 "JSON Schema" of [Chapter 10.2](https://yaml.org/spec/1.2.2/#json-schema) is a tag schema, not a syntax subset, and is not what the command targets.)
 
-### ✅ Supported (YAML 1.2 JSON Schema)
+### ✅ Supported (block-style subset)
 
 | Feature | YAML 1.2 Reference | Example |
 |---------|-------------------|---------|
@@ -359,7 +359,7 @@ These features are part of the full YAML 1.2 specification but are intentionally
 | Feature | YAML 1.2 Reference | Reason |
 |---------|-------------------|--------|
 | Anchors & Aliases | [Chapter 7.1](https://yaml.org/spec/1.2.2/#71-alias-nodes) | `&anchor`, `*alias` - Complex reference handling |
-| Block scalars | [Chapter 8.1](https://yaml.org/spec/1.2.2/#81-block-scalar-styles) | `\|`, `>` - Multi-line literal/folded styles |
+| Block scalars | [Chapter 8.1](https://yaml.org/spec/1.2.2/#81-block-scalar-styles) | `\|`, `>` - Not parsed by default; opt-in via the `blockscalars` option (v1.6.0+) |
 | Flow collections | [Chapter 7.4](https://yaml.org/spec/1.2.2/#74-flow-collection-styles) | `{a: 1}`, `[1, 2]` - JSON-like inline syntax |
 | Tags | [Chapter 6.9](https://yaml.org/spec/1.2.2/#69-tag) | `!!map`, `!!seq` - Type annotations |
 | Multiple documents | [Chapter 9.2](https://yaml.org/spec/1.2.2/#92-streams) | `---` document separators |
@@ -478,9 +478,9 @@ Vectorized operations (gen, regexm, levelsof) process all rows at once rather th
 
 ## Design Principles
 
-1. **YAML 1.2 Compliance**: Implements the JSON Schema (Chapter 10.2) of the [YAML 1.2 Specification](https://yaml.org/spec/1.2.2/), which covers 95%+ of configuration use cases.
+1. **YAML 1.2 subset**: Implements a restricted block-style subset of the [YAML 1.2 Specification](https://yaml.org/spec/1.2.2/) that covers the configuration files most commonly encountered in analytical workflows.
 
-2. **JSON Compatibility**: Per YAML 1.2's design goal, the supported subset ensures that valid JSON is also valid YAML (Chapter 1.2 of the specification).
+2. **Block-style focus**: Flow-style (JSON-like) collections, anchors, aliases, and tags are not parsed; the constructs fast-read detects fail explicitly with an error, and the rest is stored as inspectable literal text.
 
 3. **Stata-Native**: Pure Stata implementation using `file read/write` - no external dependencies (Python, LibYAML, etc.).
 
@@ -497,16 +497,16 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.7.0)
+│   ├── yaml.ado           # Main command dispatcher (v2.0.0)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
 ├── src/_/
 │   ├── _yaml_mataread.ado # Mata bulk-load parser (Phase 2)
 │   └── _yaml_collapse.ado # Wide-format collapse helper (Phase 2)
 ├── qa/
-│   ├── run_tests.do       # QA runner (26 tests)
+│   ├── run_tests.do       # QA runner (27 tests)
 │   ├── README.md          # QA framework documentation
-│   ├── scripts/           # Test scripts (20 files)
+│   ├── scripts/           # Test scripts (22 files)
 │   └── fixtures/          # Test fixtures
 ├── examples/              # Examples and test files
 │   ├── README.md
@@ -532,7 +532,6 @@ UNICEF
 ## References
 
 - **YAML 1.2 Specification**: Ben-Kiki, O., Evans, C., & döt Net, I. (2021). *YAML Ain't Markup Language (YAML™) Version 1.2* (Revision 1.2.2). https://yaml.org/spec/1.2.2/
-- **JSON Schema**: YAML 1.2 Specification, Chapter 10.2. https://yaml.org/spec/1.2.2/#json-schema
 - **YAML Official Site**: https://yaml.org/
 
 ## License

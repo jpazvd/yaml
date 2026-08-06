@@ -1,7 +1,11 @@
 *******************************************************************************
 * yaml_get
-*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 * Get metadata attributes for a specific key
+* v 1.6.0: scalar-leaf lookups (yaml get somekey where somekey holds a value
+*   and has no children) now return r(value), as documented. Previously this
+*   worked only in the legacy no-parent-variable fallback, so the documented
+*   pattern 'yaml get input_file' -> r(value) silently returned nothing.
 *******************************************************************************
 
 program define yaml_get, rclass
@@ -46,11 +50,17 @@ program define yaml_get, rclass
     local keyname = subinstr("`keyname'", `"""', "", .)
     local keyname = strtrim("`keyname'")
     
-    * Check for colon syntax (parent:key) - e.g., indicators:CME_MRY0T4
-    local colon_pos = strpos("`keyname'", ":")
-    if (`colon_pos' > 0) {
-        local parent = substr("`keyname'", 1, `colon_pos' - 1)
-        local keyname = substr("`keyname'", `colon_pos' + 1, .)
+    * Check for colon syntax - e.g., indicators:CME_MRY0T4 or a:b:c.
+    * Every colon is a path separator; parent/key split at the LAST colon.
+    local last_colon = 0
+    local cpos = strpos("`keyname'", ":")
+    while (`cpos' > 0) {
+        local last_colon = `last_colon' + `cpos'
+        local cpos = strpos(substr("`keyname'", `last_colon' + 1, .), ":")
+    }
+    if (`last_colon' > 0) {
+        local parent = subinstr(substr("`keyname'", 1, `last_colon' - 1), ":", "_", .)
+        local keyname = substr("`keyname'", `last_colon' + 1, .)
         local search_prefix "`parent'_`keyname'"
     }
     else {
@@ -109,7 +119,8 @@ program define _yaml_get_impl, rclass
     local found = 0
     local n = _N
     local n_attrs = 0
-    
+    local _seq_items ""
+
     * Check if parent variable exists
     capture confirm variable parent
     local has_parent = (_rc == 0)
@@ -126,7 +137,7 @@ program define _yaml_get_impl, rclass
 
                 if ("`attributes'" == "") {
                     if (`has_parent') {
-                        keep if parent == "`search_prefix'" & type != "parent"
+                        keep if (parent == "`search_prefix'" | key == "`search_prefix'") & type != "parent"
                     }
                     else {
                         keep if strpos(key, "`search_prefix'") == 1
@@ -138,6 +149,15 @@ program define _yaml_get_impl, rclass
                         local v = value[`i']
                         local t = type[`i']
                         if (`has_parent') {
+                            * Exact match on a scalar leaf: return the value itself
+                            if ("`k'" == "`search_prefix'") {
+                                local found = 1
+                                return local value `"`v'"'
+                                if ("`quiet'" == "") {
+                                    di as text "  value: " as result `"`v'"'
+                                }
+                                continue
+                            }
                             local plen = length("`search_prefix'")
                             if (substr("`k'", 1, `plen') == "`search_prefix'" & substr("`k'", `plen'+1, 1) == "_") {
                                 local attr_name = substr("`k'", `plen' + 2, .)
@@ -147,7 +167,12 @@ program define _yaml_get_impl, rclass
                             }
                             local found = 1
                             local n_attrs = `n_attrs' + 1
-                            return local `attr_name' `"`v'"'
+                            if (regexm("`attr_name'", "^[0-9]+$")) {
+                                local _seq_items `"`_seq_items' `v'"'
+                            }
+                            else {
+                                return local `attr_name' `"`v'"'
+                            }
                             if ("`quiet'" == "") {
                                 di as text "  `attr_name': " as result `"`v'"'
                             }
@@ -161,7 +186,12 @@ program define _yaml_get_impl, rclass
                                     if (strpos("`attr_name'", "_") == 0 & "`t'" != "parent") {
                                         local found = 1
                                         local n_attrs = `n_attrs' + 1
-                                        return local `attr_name' `"`v'"'
+                                        if (regexm("`attr_name'", "^[0-9]+$")) {
+                                            local _seq_items `"`_seq_items' `v'"'
+                                        }
+                                        else {
+                                            return local `attr_name' `"`v'"'
+                                        }
                                         if ("`quiet'" == "") {
                                             di as text "  `attr_name': " as result `"`v'"'
                                         }
@@ -201,6 +231,10 @@ program define _yaml_get_impl, rclass
         }
     }
     if (`used_index') {
+        if (`"`_seq_items'"' != "") {
+            local _seq_items = strtrim(`"`_seq_items'"')
+            return local value `"`_seq_items'"'
+        }
         return scalar found = `found'
         return scalar n_attrs = `n_attrs'
         exit
@@ -216,7 +250,16 @@ program define _yaml_get_impl, rclass
             
             if (`has_parent') {
                 local p = parent[`i']
-                
+
+                * Exact match on a scalar leaf: return the value itself
+                if ("`k'" == "`search_prefix'" & "`t'" != "parent") {
+                    local found = 1
+                    return local value `"`v'"'
+                    if ("`quiet'" == "") {
+                        di as text "  value: " as result `"`v'"'
+                    }
+                }
+
                 * Check if this key's parent matches our search prefix
                 if ("`p'" == "`search_prefix'" & "`t'" != "parent") {
                     * Extract attribute name (remove parent prefix from key)
@@ -230,8 +273,13 @@ program define _yaml_get_impl, rclass
                     
                     local found = 1
                     local n_attrs = `n_attrs' + 1
-                    return local `attr_name' `"`v'"'
-                    
+                    if (regexm("`attr_name'", "^[0-9]+$")) {
+                        local _seq_items `"`_seq_items' `v'"'
+                    }
+                    else {
+                        return local `attr_name' `"`v'"'
+                    }
+
                     if ("`quiet'" == "") {
                         di as text "  `attr_name': " as result `"`v'"'
                     }
@@ -251,8 +299,13 @@ program define _yaml_get_impl, rclass
                         if (strpos("`attr_name'", "_") == 0 & "`t'" != "parent") {
                             local found = 1
                             local n_attrs = `n_attrs' + 1
-                            return local `attr_name' `"`v'"'
-                            
+                            if (regexm("`attr_name'", "^[0-9]+$")) {
+                                local _seq_items `"`_seq_items' `v'"'
+                            }
+                            else {
+                                return local `attr_name' `"`v'"'
+                            }
+
                             if ("`quiet'" == "") {
                                 di as text "  `attr_name': " as result `"`v'"'
                             }
@@ -294,6 +347,10 @@ program define _yaml_get_impl, rclass
         }
     }
 
+    if (`"`_seq_items'"' != "") {
+        local _seq_items = strtrim(`"`_seq_items'"')
+        return local value `"`_seq_items'"'
+    }
     return scalar found = `found'
     return scalar n_attrs = `n_attrs'
 end

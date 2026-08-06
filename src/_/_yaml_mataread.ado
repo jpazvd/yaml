@@ -1,6 +1,6 @@
 *******************************************************************************
 *! _yaml_mataread
-*! v 1.7.1   21Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 *! v1.7.1: Fix parent_stack contamination: sibling keys at same indent restore parent
 *! Mata-accelerated YAML parser (bulk mode)
 *! Translates the canonical parser logic from yaml_read.ado into Mata
@@ -122,6 +122,18 @@ void _yaml_mata_parse(string scalar filepath,
         /* --- List item handling (mirrors lines 395-472) --- */
         if (substr(trimmed, 1, 2) == "- ") {
             item_value = strtrim(substr(trimmed, 3, .))
+
+            /* Sequences of mappings ("- key: value") are supported only by
+               the canonical parser; fail explicitly instead of storing a
+               corrupted representation. */
+            if (substr(item_value, 1, 1) != char(34) &
+                substr(item_value, 1, 1) != "'" &
+                regexm(item_value, "^[^:#]+:([ ]|$)")) {
+                fclose(fh)
+                errprintf("bulk parser does not support sequences of mappings (- key: value items); rerun without the bulk option\n")
+                exit(error(198))
+            }
+
             list_index++
 
             /* Build full key */

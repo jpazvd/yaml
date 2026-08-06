@@ -1,0 +1,11 @@
+# Demonstration file shipped with the yaml package (see help yaml, Examples)
+# A harmonization map: values: is a block sequence of mappings
+survey: MICS6
+variable: male
+values:
+  - from: 1
+    to: 1
+    label: Male
+  - from: 2
+    to: 0
+    label: Female

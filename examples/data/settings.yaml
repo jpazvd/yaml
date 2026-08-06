@@ -1,5 +1,5 @@
 # Data processing settings
-# Used in documented examples for YAML-driven scripts
+# Used in the documented examples for YAML-driven scripts
 
 dataset: mics_2024.dta
 output_path: ./results/

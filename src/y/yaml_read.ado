@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml_read
-*! v 1.9.2   22Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 * Read YAML file into Stata (dataset by default, or frame)
 * v1.9.2: Strip quotes from list item values in canonical parser (parity with Mata bulk)
 * v1.9.1: Fix parent_stack contamination for sibling keys; add source_org to indicators preset
@@ -384,17 +384,32 @@ program define yaml_read, rclass
             }
         }
 
+        * Row count of the fast-read table (one row per key/field pair)
+        if (`use_frame' == 1) {
+            frame `frame': local _fr_n = _N
+        }
+        else {
+            local _fr_n = _N
+        }
         return local filename "`using'"
         return local yaml_mode "fastread"
         return scalar cache_hit = 0
+        return scalar n_keys = `_fr_n'
         exit 0
     }
 
     * Fast-read cache hit (skip parse)
     if ("`fastread'" != "" & `skip_parse' == 1) {
+        if (`use_frame' == 1) {
+            frame `frame': local _fr_n = _N
+        }
+        else {
+            local _fr_n = _N
+        }
         return local filename "`using'"
         return local yaml_mode "fastread"
         return scalar cache_hit = 1
+        return scalar n_keys = `_fr_n'
         exit 0
     }
 
@@ -491,6 +506,13 @@ program define yaml_read, rclass
                     continue, break
                 }
             }
+            * End any sequence-of-mappings bookkeeping on the deeper levels we
+            * are leaving, so a later re-descent to the same level number starts
+            * a fresh list rather than reusing a stale list key (needed once the
+            * reuse guard below no longer keys on parent_stack).
+            forvalues _lv = `=`found_level' + 1'/`n_levels' {
+                local mapitem_key_`_lv' ""
+            }
             * Restore parent_stack to the parent at that level
             local parent_stack "`parent_`found_level''"
             local n_levels = `found_level'
@@ -514,14 +536,96 @@ program define yaml_read, rclass
             local is_list = (substr(`"`trimmed'"', 1, 2) == "- ")
         }
 
+        * ----- Sequence-of-mappings item: "- key: value" (v2.0.0) -----------
+        * The item becomes a structural row <list>_N (type list_map); its
+        * inline first pair and the following deeper-indented lines are
+        * parsed as ordinary key:value children of <list>_N. One flat
+        * mapping level per item is supported.
+        if (`is_list') {
+            local item_probe = strtrim(substr(`"`trimmed'"', 3, .))
+            mata: _yaml_seq("item_probe")
+            if (`_isseq') {
+
+                * Resolve the list key this item belongs to. On the first
+                * item, derive it from the current context (as scalar items
+                * do); on later items, last_key is stale (it points at the
+                * previous item's last child), so reuse the per-level state.
+                local lv = `n_levels'
+                * A non-empty list key at this level means the sequence is still
+                * open (a sibling key clears it below; abandoning the level clears
+                * it above), so this item continues that list. This must NOT key
+                * on parent_stack: with flush-style dashes (the item at the same
+                * indent as its parent key), going back up restores parent_stack
+                * to the enclosing level, which no longer matches the list's own
+                * parent -- the bug that split such sequences.
+                if ("`mapitem_key_`lv''" != "") {
+                    local lk "`mapitem_key_`lv''"
+                }
+                else {
+                    local lk "`last_key'"
+                    if ("`parent_stack'" != "" & strpos("`last_key'", "`parent_stack'") != 1) {
+                        local lk "`parent_stack'_`last_key'"
+                    }
+                    local mapitem_key_`lv' "`lk'"
+                    local mapitem_parent_`lv' "`parent_stack'"
+                    local mapitem_idx_`lv' = 0
+                }
+                local mapitem_idx_`lv' = `mapitem_idx_`lv'' + 1
+                local _mi = `mapitem_idx_`lv''
+                local full_key "`lk'_`_mi'"
+
+                * Store the structural item row
+                local n_keys = `n_keys' + 1
+                if (`use_frame' == 1) {
+                    frame `frame' {
+                        local newobs = _N + 1
+                        qui set obs `newobs'
+                        qui replace key = "`full_key'" in `newobs'
+                        qui replace level = `level' in `newobs'
+                        qui replace parent = "`lk'" in `newobs'
+                        qui replace type = "list_map" in `newobs'
+                    }
+                }
+                else {
+                    local newobs = _N + 1
+                    qui set obs `newobs'
+                    qui replace key = "`full_key'" in `newobs'
+                    qui replace level = `level' in `newobs'
+                    qui replace parent = "`lk'" in `newobs'
+                    qui replace type = "list_map" in `newobs'
+                }
+
+                * Synthetic descent: children of this item live two columns
+                * deeper (the inline pair defines that indent level)
+                local n_levels = `n_levels' + 1
+                local indent_`n_levels' = `indent' + 2
+                local parent_`n_levels' "`full_key'"
+                local parent_stack "`full_key'"
+                local current_indent = `indent' + 2
+                local indent = `indent' + 2
+                local level = `n_levels'
+                if (`level' > `max_level') local max_level = `level'
+
+                * Hand the inline first pair to the key:value logic below
+                local trimmed `"`item_probe'"'
+                local is_list = 0
+            }
+        }
+        * --------------------------------------------------------------------
+
         if (`is_list') {
             * List item - store as separate row with type "list_item"
             local item_value = strtrim(substr(`"`trimmed'"', 3, .))
 
-            * Remove quotes from list item value (matches Mata bulk parser)
-            if (substr(`"`item_value'"', 1, 1) == `"""' | substr(`"`item_value'"', 1, 1) == "'") {
-                local item_value = substr(`"`item_value'"', 2, length(`"`item_value'"') - 2)
-            }
+            * Strip one matching pair of outer quotes. This is done in Mata, not with
+            * substr(`"`value'"', 1, 1), because expanding a macro into an expression
+            * re-exposes any quote characters it contains to Stata's parser: a value like
+            *     'treated if it a) is long-lasting, b) pre-treated'
+            * becomes substr(`"'treated if it a) ...'"',1,1), where the apostrophes break
+            * the compound quotes and the stray ")" closes the call early -- r(133),
+            * "unknown function ()". macval() and sentinel prefixes do not save it.
+            * Mata reads the macro's bytes via st_local() and never expands them.
+            mata: _yaml_q("item_value", "_yi_", 1)
 
             * Increment list index for this parent
             local list_index = `list_index' + 1
@@ -600,7 +704,11 @@ program define yaml_read, rclass
         else {
             * Reset list index when we encounter a non-list item
             local list_index = 0
-            
+
+            * A key:value line at this level ends any sequence-of-mappings
+            * bookkeeping for the level (the list is over)
+            local mapitem_key_`n_levels' ""
+
             * Key-value pair or nested key
             local colon_pos = strpos(`"`trimmed'"', ":")
 
@@ -611,15 +719,13 @@ program define yaml_read, rclass
                 * Reset vtype for this new key-value pair
                 local vtype ""
                 
-                * Remove quotes from value if present (and remember it was quoted)
-                local was_quoted = 0
-                if (substr(`"`value'"', 1, 1) == `"""' | substr(`"`value'"', 1, 1) == "'") {
-                    local value = substr(`"`value'"', 2, length(`"`value'"') - 2)
-                    local was_quoted = 1
-                }
+                * Strip and classify in Mata (_yaml_q, end of this file); no value
+                * is ever expanded into a Stata expression.
+                mata: _yaml_q("value", "_yq_", 1)
+                local was_quoted = `_yq_q'
 
                 * Block scalar handling (|, >, |-, >-)
-                if ("`blockscalars'" != "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                if ("`blockscalars'" != "" & `_yq_blk') {
                     local block_style `"`value'"'
                     local block_indent = `indent'
                     local block_val ""
@@ -654,8 +760,9 @@ program define yaml_read, rclass
                 }
 
                 * Continuation lines: plain scalar spanning multiple lines
-                if (`"`value'"' != "" & `has_pending' == 0 & ///
-                    !inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                local _vn : length local value
+                local _joined = 0
+                if (`_vn' > 0 & `has_pending' == 0 & !`_yq_blk') {
                     file read `fh' line
                     while (r(eof) == 0) {
                         local next_trim = strtrim(`"`line'"')
@@ -665,18 +772,27 @@ program define yaml_read, rclass
                             local next_indent = `next_indent' + 1
                             local tmp = substr(`"`tmp'"', 2, .)
                         }
-                        * Continuation if: deeper indent, not empty/comment, not list, not key:value
+                        * Continuation if: deeper indent, not empty/comment, not list, not key:value.
+                        * A line ending in ':' is a parent key, never a plain-scalar
+                        * continuation (YAML forbids key-shaped plain continuations).
                         if (`next_indent' <= `indent' | `"`next_trim'"' == "" | ///
                             substr(`"`next_trim'"', 1, 1) == "#" | ///
                             substr(`"`next_trim'"', 1, 2) == "- " | ///
+                            substr(`"`next_trim'"', -1, 1) == ":" | ///
                             (strpos(`"`next_trim'"', ":") > 0 & strpos(`"`next_trim'"', ": ") > 0)) {
                             local pending_line `"`line'"'
                             local has_pending = 1
                             continue, break
                         }
-                        local value = `"`value'"' + " " + `"`next_trim'"'
+                        mata: _yaml_cat("value", "next_trim")
+                        local _joined = 1
                         file read `fh' line
                     }
+                }
+                * a joined value changed; re-classify (no second strip)
+                if (`_joined') {
+                    mata: _yaml_q("value", "_yq_", 0)
+                    local _vn : length local value
                 }
 
                 * Build full key name with parent hierarchy
@@ -695,7 +811,8 @@ program define yaml_read, rclass
                 local maxkeylen = 32 - `prefixlen'
                 if (length("`full_key'") > `maxkeylen') {
                     local short_key = substr("`full_key'", 1, `maxkeylen')
-                    if ("`verbose'" != "") {
+                    * Notice is only relevant when locals/scalars are produced
+                    if ("`verbose'" != "" & ("`locals'" != "" | "`scalars'" != "")) {
                         di as text "  (key truncated to `maxkeylen' chars for locals)"
                     }
                 }
@@ -706,7 +823,7 @@ program define yaml_read, rclass
                 * Determine type and save current parent for storage
                 local this_parent "`parent_stack'"
                 
-                if (`"`value'"' == "") {
+                if (`_vn' == 0) {
                     local vtype "parent"
                     * This key becomes a parent for nested items AFTER storing
                     local last_key "`full_key'"
@@ -722,15 +839,15 @@ program define yaml_read, rclass
                             local vtype "numeric"
                         }
                     }
-                    if ("`vtype'" == "" & inlist(`"`value'"', "true", "True", "TRUE", "yes", "Yes", "YES")) {
+                    if ("`vtype'" == "" & `_yq_bool' == 1) {
                         local vtype "boolean"
                         local value "1"
                     }
-                    else if ("`vtype'" == "" & inlist(`"`value'"', "false", "False", "FALSE", "no", "No", "NO")) {
+                    else if ("`vtype'" == "" & `_yq_bool' == 2) {
                         local vtype "boolean"
                         local value "0"
                     }
-                    else if ("`vtype'" == "" & (`"`value'"' == "null" | `"`value'"' == "~")) {
+                    else if ("`vtype'" == "" & `_yq_null') {
                         local vtype "null"
                         local value ""
                     }
@@ -976,5 +1093,70 @@ program define yaml_read, rclass
         di as text "Successfully parsed " as result `n_keys' as text " keys from YAML file."
         di as text "Maximum nesting level: " as result `max_level'
     }
+
+end
+
+*-------------------------------------------------------------------------------
+* Mata primitives, compiled when this file loads. Values are NEVER expanded
+* into Stata expressions: expanding a macro re-exposes its quote characters
+* to the parser, so a real catalog description such as
+*     'treated if it a) is long-lasting, b) pre-treated'
+* aborts with "unknown function ()" (r(133)) inside substr()/inlist()/regexm().
+* macval() and sentinel prefixes do not save it; st_local() reads the macro's
+* bytes without expansion. Called directly (not through a wrapper program),
+* so st_local() acts on the CALLER's macros.
+*-------------------------------------------------------------------------------
+version 14.0
+capture mata: mata drop _yaml_q()
+capture mata: mata drop _yaml_seq()
+capture mata: mata drop _yaml_cat()
+
+mata:
+
+// strip one matching pair of outer quotes (if dostrip) and classify:
+//   pfx q    1 if a quote pair was removed
+//   pfx n    length after any strip
+//   pfx blk  value is a bare block indicator  | |- > >-
+//   pfx flow value starts a flow collection   { [
+//   pfx bool 1 true-like, 2 false-like, 0 neither
+//   pfx null value is null or ~
+void _yaml_q(string scalar macname, string scalar pfx, real scalar dostrip)
+{
+    string scalar v, f
+    real scalar n, q
+
+    v = st_local(macname)
+    n = strlen(v)
+    f = substr(v, 1, 1)
+    q = (n >= 2 & f == substr(v, n, 1) & (f == char(34) | f == char(39)))
+    if (q & dostrip) {
+        v = substr(v, 2, n - 2)
+        st_local(macname, v)
+        n = strlen(v)
+        f = substr(v, 1, 1)
+    }
+    st_local(pfx + "q",    strofreal(q & dostrip))
+    st_local(pfx + "n",    strofreal(n))
+    st_local(pfx + "blk",  strofreal(v == "|" | v == "|-" | v == ">" | v == ">-"))
+    st_local(pfx + "flow", strofreal(f == "{" | f == "["))
+    st_local(pfx + "bool", strofreal(2*(v=="false"|v=="False"|v=="FALSE"|v=="no"|v=="No"|v=="NO") + (v=="true"|v=="True"|v=="TRUE"|v=="yes"|v=="Yes"|v=="YES")))
+    st_local(pfx + "null", strofreal(v == "null" | v == "~"))
+}
+
+// sets _isseq: item is an (unquoted) mapping, outside the one-scalar model
+void _yaml_seq(string scalar macname)
+{
+    string scalar v, f
+
+    v = st_local(macname)
+    f = substr(v, 1, 1)
+    st_local("_isseq", strofreal(f != char(34) & f != char(39) & regexm(v, "^[^:#]+:([ ]|$)")))
+}
+
+// a := a + " " + b   (plain-scalar continuation join)
+void _yaml_cat(string scalar a, string scalar b)
+{
+    st_local(a, st_local(a) + " " + st_local(b))
+}
 
 end

@@ -1,0 +1,45 @@
+# Demonstration file shipped with the yaml package (see help yaml, Examples)
+# SOURCE side, MICS round 6. Each entry is one row of the published
+# IPUMS MICS / UNICEF MICS variable crosswalk: the IPUMS harmonized name,
+# its label and unit of analysis, alongside what round 6 calls the variable.
+# Citation: IPUMS MICS, "Comparison of UNICEF Variable Names and IPUMS
+# Variable Names", list as of December 2024.
+# https://mics.ipums.org/mics/resources/training_exercises/2024_12_var_names_ipums_unicef.pdf
+source: MICS6
+study:
+  id: ETH_2019_MICS6
+  country: ETH
+  year: 2019
+  survey: MICS6
+  extract: eth_2019_hl.dta
+variables:
+  - name: HL3
+    ipums_name: RELATE
+    ipums_label: Relationship with head of household
+    unit: hl
+    concept: relationship_to_head
+  - name: hl4
+    ipums_name: SEX
+    ipums_label: Sex of household member
+    unit: hl
+    concept: sex
+  - name: hl6
+    ipums_name: AGE
+    ipums_label: Age of household member in completed years
+    unit: hl
+    concept: age
+  - name: hl12
+    ipums_name: MOTHERALIVE
+    ipums_label: Natural mother alive
+    unit: hl
+    concept: mother_alive
+  - name: ed4
+    ipums_name: SCHOOLEVER
+    ipums_label: Household member has ever attended school
+    unit: hl
+    concept: ever_attended_school
+  - name: ed5a
+    ipums_name: EDLEVEL
+    ipums_label: Highest level of school attended
+    unit: hl
+    concept: highest_level_attended

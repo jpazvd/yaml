@@ -1,6 +1,6 @@
 *******************************************************************************
 * _yaml_fastread
-*! v 1.5.1   18Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 * Fast-read parser (opt-in): shallow mappings + list blocks
 *
 * Data model (differs from canonical parser):
@@ -86,9 +86,17 @@ program define _yaml_fastread
         * List item
         if (substr(`"`trimmed'"', 1, 2) == "- ") {
             local item_value = strtrim(substr(`"`trimmed'"', 3, .))
-            if (substr(`"`item_value'"', 1, 1) == `"""' | substr(`"`item_value'"', 1, 1) == "'") {
-                local item_value = substr(`"`item_value'"', 2, length(`"`item_value'"') - 2)
+            * Sequence items that are themselves mappings are outside the
+            * fast-read model: fail explicitly rather than storing junk
+            * (quoted scalar items are exempt even if they contain ': ')
+            mata: _yaml_seq("item_value")
+            if (`_isseq') {
+                di as err "fastread unsupported sequence-of-mappings item at line `linenum'. Rerun without fastread."
+                exit 198
             }
+            * Strip outer quotes in Mata (_yaml_q, end of this file); values are
+            * never expanded into Stata expressions -- see the block below.
+            mata: _yaml_q("item_value", "_yi_", 1)
 
             local allow_list = 1
             if (`use_listkeys') {
@@ -124,7 +132,8 @@ program define _yaml_fastread
             local left = strtrim(substr(`"`trimmed'"', 1, `colon_pos' - 1))
             local right = strtrim(substr(`"`trimmed'"', `colon_pos' + 1, .))
 
-            if (`"`right'"' == "") {
+            local _rlen : length local right
+            if (`_rlen' == 0) {
                 * Header (key)
                 if (`indent' > `current_indent') {
                     local n_levels = `n_levels' + 1
@@ -149,18 +158,20 @@ program define _yaml_fastread
             else {
                 * Field with value
                 local current_field "`left'"
-                local value = `"`right'"'
-                * Flow collection as value
-                if (substr(`"`value'"', 1, 1) == "{" | substr(`"`value'"', 1, 1) == "[") {
+                local value : copy local right
+                * Probe the raw value in Mata (_yaml_q, end of this file): nothing
+                * below expands the value into a Stata expression.
+                mata: _yaml_q("value", "_yq_", 0)
+                if (`_yq_flow') {
                     di as err "fastread unsupported flow collection at line `linenum'. Rerun without fastread."
                     exit 198
                 }
-                if ("`blockscalars'" == "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                if ("`blockscalars'" == "" & `_yq_blk') {
                     di as err "fastread unsupported block scalar at line `linenum'. Rerun without fastread or use blockscalars."
                     exit 198
                 }
                 * Optional block scalar capture
-                if ("`blockscalars'" != "" & inlist(`"`value'"', "|", "|-", ">", ">-")) {
+                if ("`blockscalars'" != "" & `_yq_blk') {
                     local block_indent = `indent'
                     local block_val ""
                     file read `fh' line
@@ -187,9 +198,8 @@ program define _yaml_fastread
                     }
                     local value `"`block_val'"'
                 }
-                if (substr(`"`value'"', 1, 1) == `"""' | substr(`"`value'"', 1, 1) == "'") {
-                    local value = substr(`"`value'"', 2, length(`"`value'"') - 2)
-                }
+                * Strip one matching pair of outer quotes (in Mata, same reason)
+                mata: _yaml_q("value", "_yq_", 1)
 
                 local allow_field = 1
                 if (`use_fields') {
@@ -224,4 +234,69 @@ program define _yaml_fastread
     label variable value "Field value"
     label variable list "List item flag"
     label variable line "Line number"
+end
+
+*-------------------------------------------------------------------------------
+* Mata primitives, compiled when this file loads. Values are NEVER expanded
+* into Stata expressions: expanding a macro re-exposes its quote characters
+* to the parser, so a real catalog description such as
+*     'treated if it a) is long-lasting, b) pre-treated'
+* aborts with "unknown function ()" (r(133)) inside substr()/inlist()/regexm().
+* macval() and sentinel prefixes do not save it; st_local() reads the macro's
+* bytes without expansion. Called directly (not through a wrapper program),
+* so st_local() acts on the CALLER's macros.
+*-------------------------------------------------------------------------------
+version 14.0
+capture mata: mata drop _yaml_q()
+capture mata: mata drop _yaml_seq()
+capture mata: mata drop _yaml_cat()
+
+mata:
+
+// strip one matching pair of outer quotes (if dostrip) and classify:
+//   pfx q    1 if a quote pair was removed
+//   pfx n    length after any strip
+//   pfx blk  value is a bare block indicator  | |- > >-
+//   pfx flow value starts a flow collection   { [
+//   pfx bool 1 true-like, 2 false-like, 0 neither
+//   pfx null value is null or ~
+void _yaml_q(string scalar macname, string scalar pfx, real scalar dostrip)
+{
+    string scalar v, f
+    real scalar n, q
+
+    v = st_local(macname)
+    n = strlen(v)
+    f = substr(v, 1, 1)
+    q = (n >= 2 & f == substr(v, n, 1) & (f == char(34) | f == char(39)))
+    if (q & dostrip) {
+        v = substr(v, 2, n - 2)
+        st_local(macname, v)
+        n = strlen(v)
+        f = substr(v, 1, 1)
+    }
+    st_local(pfx + "q",    strofreal(q & dostrip))
+    st_local(pfx + "n",    strofreal(n))
+    st_local(pfx + "blk",  strofreal(v == "|" | v == "|-" | v == ">" | v == ">-"))
+    st_local(pfx + "flow", strofreal(f == "{" | f == "["))
+    st_local(pfx + "bool", strofreal(2*(v=="false"|v=="False"|v=="FALSE"|v=="no"|v=="No"|v=="NO") + (v=="true"|v=="True"|v=="TRUE"|v=="yes"|v=="Yes"|v=="YES")))
+    st_local(pfx + "null", strofreal(v == "null" | v == "~"))
+}
+
+// sets _isseq: item is an (unquoted) mapping, outside the one-scalar model
+void _yaml_seq(string scalar macname)
+{
+    string scalar v, f
+
+    v = st_local(macname)
+    f = substr(v, 1, 1)
+    st_local("_isseq", strofreal(f != char(34) & f != char(39) & regexm(v, "^[^:#]+:([ ]|$)")))
+}
+
+// a := a + " " + b   (plain-scalar continuation join)
+void _yaml_cat(string scalar a, string scalar b)
+{
+    st_local(a, st_local(a) + " " + st_local(b))
+}
+
 end

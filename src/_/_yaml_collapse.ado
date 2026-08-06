@@ -1,6 +1,6 @@
 *******************************************************************************
 *! _yaml_collapse
-*! v 1.8.0   20Feb2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.0   26Jul2026               by Joao Pedro Azevedo (UNICEF)
 *! Post-process: pivot long YAML output to wide format (one row per entity)
 *! Expects standard canonical schema in memory: key value level parent type
 *! Uses Mata for performance on large datasets (avoids reshape wide)

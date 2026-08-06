@@ -1,5 +1,5 @@
 # Development environment configuration
-# Used in documented examples for multi-file comparison
+# Used in the documented examples for multi-file comparison
 
 environment: development
 version: 1.0.0

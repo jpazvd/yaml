@@ -43,6 +43,13 @@ foreach arg of local args {
 		di as text "  REG-07   early-exit does not double-close file handle (BUG-7)"
 		di as text "  REG-08   yaml list header with parent filter (BUG-8)"
 		di as text "  REG-09   sibling parent_stack contamination (BUG-9)"
+		di as text "  REG-10   flush-dash sequences of mappings (BUG-10)"
+		di as text "  REG-11   consumer catalog corpus parses (BUG-10)"
+		di as text "  REG-12   consumer catalog round-trip fidelity"
+		di as text "  REG-13   yaml list stata option compound quotes (BUG-11)"
+		di as text "  REG-14   yaml write scalars() emits scalars (BUG-12)"
+		di as text "  REG-15   generated harmonization do-file runs (BUG-13)"
+		di as text "  REG-16   quote characters in values parse (BUG-14)"
 		di as text ""
 		di as text "  Feature Tests (v1.6.0):"
 		di as text "  FEAT-01  embedded double quotes via Mata st_sstore"
@@ -402,6 +409,105 @@ if "`target_test'" == "" | "`target_test'" == "REG-09" {
 	}
 	else {
 		test_fail, id("REG-09") msg("test_sibling_parent_stack.do failed (rc=`erc')")
+	}
+}
+
+* REG-10: flush-dash sequences of mappings parse as siblings (BUG-10)
+if "`target_test'" == "" | "`target_test'" == "REG-10" {
+	test_start, id("REG-10") desc("flush-dash sequences of mappings (BUG-10)")
+	capture quietly do "`qadir'/scripts/test_flush_seqmap.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-10")
+	}
+	else {
+		test_fail, id("REG-10") msg("test_flush_seqmap.do failed (rc=`erc')")
+	}
+}
+
+* REG-11: vendored real consumer catalogs all parse (BUG-10 corpus guard)
+if "`target_test'" == "" | "`target_test'" == "REG-11" {
+	test_start, id("REG-11") desc("consumer catalog corpus parses (BUG-10)")
+	capture quietly do "`qadir'/scripts/test_catalog_corpus.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-11")
+	}
+	else {
+		test_fail, id("REG-11") msg("test_catalog_corpus.do failed (rc=`erc')")
+	}
+}
+
+* REG-12: consumer catalogs round-trip through yaml write (data-preserving)
+if "`target_test'" == "" | "`target_test'" == "REG-12" {
+	test_start, id("REG-12") desc("consumer catalog round-trip fidelity")
+	capture quietly do "`qadir'/scripts/test_catalog_roundtrip.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-12")
+	}
+	else {
+		test_fail, id("REG-12") msg("test_catalog_roundtrip.do failed (rc=`erc')")
+	}
+}
+
+* REG-13: yaml list, stata returns usable compound-quoted keys (BUG-11)
+if "`target_test'" == "" | "`target_test'" == "REG-13" {
+	test_start, id("REG-13") desc("yaml list stata option compound quotes (BUG-11)")
+	capture quietly do "`qadir'/scripts/test_list_stata_quotes.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-13")
+	}
+	else {
+		test_fail, id("REG-13") msg("test_list_stata_quotes.do failed (rc=`erc')")
+	}
+}
+
+* REG-14: yaml write, scalars() actually emits the named scalars (BUG-12)
+if "`target_test'" == "" | "`target_test'" == "REG-14" {
+	test_start, id("REG-14") desc("yaml write scalars() emits scalars (BUG-12)")
+	capture quietly do "`qadir'/scripts/test_write_scalars.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-14")
+	}
+	else {
+		test_fail, id("REG-14") msg("test_write_scalars.do failed (rc=`erc')")
+	}
+}
+
+* REG-15: the do-file yaml_harmonize generates must run, including on an
+* extract that does not carry every source variable (BUG-13)
+if "`target_test'" == "" | "`target_test'" == "REG-15" {
+	test_start, id("REG-15") desc("generated harmonization do-file runs (BUG-13)")
+	capture quietly do "`qadir'/scripts/test_harmonize.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-15")
+	}
+	else {
+		test_fail, id("REG-15") msg("test_harmonize.do failed (rc=`erc')")
+	}
+}
+
+* REG-16: values containing quotes / unmatched parentheses parse (BUG-14)
+if "`target_test'" == "" | "`target_test'" == "REG-16" {
+	test_start, id("REG-16") desc("quote characters in values parse (BUG-14)")
+	capture quietly do "`qadir'/scripts/test_quotes_in_values.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-16")
+	}
+	else {
+		test_fail, id("REG-16") msg("test_quotes_in_values.do failed (rc=`erc')")
 	}
 }
 

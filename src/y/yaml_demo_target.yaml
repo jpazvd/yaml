@@ -1,0 +1,44 @@
+# Demonstration file shipped with the yaml package (see help yaml, Examples)
+# TARGET side of the harmonization crosswalk: everything that is true of the
+# canonical variable regardless of which survey round it came from.
+#
+# Each concept may carry:
+#   ddi    a Data Documentation Initiative identifier for the concept
+#   codes  the canonical value labels
+#
+# Metadata added here reaches every generated do-file at once: this is the file
+# to edit when a standard changes, not the hundreds of do-files it produces.
+standard: IPUMS MICS
+concepts:
+  - concept: relationship_to_head
+    ddi: individual.relationshipToHead
+  - concept: sex
+    ddi: individual.sex
+    codes:
+      - code: 1
+        label: Male
+      - code: 2
+        label: Female
+  - concept: age
+    ddi: individual.age
+  - concept: mother_alive
+    ddi: individual.motherAlive
+  - concept: ever_attended_school
+    ddi: education.everAttended
+  - concept: highest_level_attended
+    ddi: education.highestLevel
+
+# DDI export contract, shared by every survey harmonized to this standard.
+# dta2ddi substitutes ;XXX;-style markers in an appended template from its
+# xxx()...vvv() options. Naming each slot here is what keeps the generated
+# call readable: xxx(ETH) means nothing on its own, country does.
+ddi:
+  template: ddi_template.xml
+  stats: min max mean stdev
+  slots:
+    - slot: xxx
+      means: country
+    - slot: yyy
+      means: year
+    - slot: zzz
+      means: survey

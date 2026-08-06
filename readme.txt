@@ -1,7 +1,7 @@
 *! readme.txt for yaml package
 *! Author: João Pedro Azevedo
-*! Version: 1.9.0
-*! Date: February 2026
+*! Version: 2.0.0
+*! Date: July 2026
 
 TITLE
     yaml: Stata module for YAML file processing
@@ -12,8 +12,8 @@ DESCRIPTION
     subcommands that enable Stata users to integrate YAML-based workflows
     into their data pipelines.
 
-    The command implements the JSON Schema subset of YAML 1.2 (3rd Edition,
-    2021), the current authoritative YAML standard. This JSON-compatible
+    The command implements a restricted block-style subset of YAML 1.2
+    (3rd Edition, 2021), the current authoritative YAML standard. This
     subset covers the most commonly used features for configuration files
     and metadata management.
 
@@ -55,8 +55,6 @@ FILES
     _yaml_collapse.ado          - Wide-format collapse helper
 
     Example files (in examples/):
-    yaml_sj_article_examples.do  - Do-file reproducing documented examples
-    yaml_sj_article_examples.log - Log file from example execution
     yaml_basic_examples.do       - Basic examples for all yaml subcommands
     yaml_basic_examples.log      - Log file from basic examples
 
@@ -72,7 +70,8 @@ FILES
     fastread_indicators.yaml - Large indicator file for fastread/bulk
 
 INSTALLATION
-    Copy yaml.ado and yaml.sthlp to your personal ado directory.
+    Copy all package files from src/y/ and src/_/ (see src/yaml.pkg)
+    to your personal ado directory.
 
     . adopath
     * Copy files to the PERSONAL directory shown
@@ -102,23 +101,26 @@ EXAMPLES
     . yaml read using "unicef_indicators.yaml", indicators replace
 
 QA TESTING
-    The package includes an automated QA suite (qa/run_tests.do) with 23
-    tests organized in four categories:
+    The package includes an automated QA suite (qa/run_tests.do) with 27
+    tests organized in five categories:
 
     ENV-01 to ENV-03   - Environment checks (command, help, version)
     EX-01  to EX-03    - Example smoke tests
-    REG-01 to REG-08   - Regression tests (BUG-1 through BUG-8)
+    REG-01 to REG-09   - Regression tests (BUG-1 through BUG-9)
     FEAT-01 to FEAT-09 - Feature tests (v1.6.0 through v1.8.0 features)
+    INT-01 to INT-03   - Integration tests (downstream packages, version sync)
 
     Latest QA run:
-    Date:     21 Feb 2026
-    Branch:   develop
-    Version:  1.9.0
+    Date:     06 Jul 2026
+    Version:  2.0.0
     Stata:    17
-    Tests:    23 run, 23 passed, 0 failed
+    Tests:    27 run, 27 passed, 0 failed
     Result:   ALL TESTS PASSED
 
 VERSION HISTORY
+    2.0.0  (06Jul2026) - Sequences of mappings, unified quoting,
+                         write fidelity, multi-level get paths, r(found)
+    1.9.2  (22Feb2026) - Parser parity fixes (list-item quotes, parent_stack)
     1.9.0  (20Feb2026) - INDICATORS preset for wbopendata/unicefdata
     1.8.0  (20Feb2026) - Collapse filter options: colfields(), maxlevel()
     1.7.0  (20Feb2026) - Mata bulk-load, collapse, strL support
@@ -130,7 +132,7 @@ VERSION HISTORY
 
 NOTES
     - The implementation is pure Stata with no external dependencies
-    - Targets the JSON-compatible subset of YAML 1.2 specification
+    - Targets a restricted block-style subset of the YAML 1.2 specification
     - Block scalars and continuation lines are supported since v1.6.0
     - Advanced YAML features (anchors, aliases, flow style) are not supported
     - All dataset names should be lowercase for cross-platform compatibility
@@ -145,5 +147,4 @@ CONTACT
     jpazevedo@unicef.org
 
 ALSO SEE
-    project article: "Reading and writing YAML files in Stata:
-    A lightweight framework for reproducible and cross-platform analytics"
+    Project repository: https://github.com/jpazvd/yaml

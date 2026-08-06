@@ -1,0 +1,12 @@
+# Demonstration file shipped with the yaml package
+name: My Project
+version: 1.0
+indicators:
+  CME_MRY0T4:
+    label: Under-five mortality rate
+    unit: Deaths per 1000 live births
+    dataflow: CME
+  CME_MRY0:
+    label: Infant mortality rate
+    unit: Deaths per 1000 live births
+    dataflow: CME

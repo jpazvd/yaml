@@ -1,5 +1,5 @@
 # Pipeline configuration
-# Used in documented examples for configuration validation
+# Used in the documented examples for configuration validation
 
 name: SDG Data Pipeline
 version: 2.1.0

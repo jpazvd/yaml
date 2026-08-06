@@ -1,0 +1,15 @@
+# Regression fixture: block sequences of mappings in both dash styles.
+# flush-dash: the "-" sits at the SAME indent as its parent key (PyYAML default).
+flush:
+- id: REF_AREA
+  position: 1
+- id: INDICATOR
+  position: 2
+- id: SEX
+  position: 3
+# indented-dash: the "-" is indented under its parent key.
+indented:
+  - id: A
+    position: 1
+  - id: B
+    position: 2

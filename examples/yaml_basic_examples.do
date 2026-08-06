@@ -39,7 +39,7 @@ log using "`base'/examples/yaml_basic_examples.log", replace text
 * Display header
 display _n
 display as text "{hline 70}"
-display as result "yaml command: documented examples"
+display as result "yaml command: Examples"
 display as text "{hline 70}"
 display as text "Date: " c(current_date) " " c(current_time)
 display as text "Stata version: " c(stata_version)
@@ -383,7 +383,7 @@ display as result "{hline 70}" _n
 * Clean up temporary files
 cap erase "`datadir'/config_modified.yaml"
 
-display as text "All examples from the documented examples have been executed."
+display as text "All examples have been executed."
 display as text "See the log file for complete output."
 display _n
 
