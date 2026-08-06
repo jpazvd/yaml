@@ -10,6 +10,8 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
+**Latest:** v1.5.1 with canonical early-exit targets, streaming tokenization, index frames, and improved fast-read support.
+
 ### Key Features
 
 - **Read YAML files** into Stata's data structure or frames
@@ -17,6 +19,10 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Query values** using hierarchical key paths
 - **Validate configurations** with required keys and type checking
 - **Multiple frame support** (Stata 16+) for managing multiple configurations
+- **Fast-scan mode** for large metadata catalogs (opt-in)
+- **Field-selective extraction** with `fields()`
+- **List block extraction** with `listkeys()` (fast-read)
+- **Frame caching** with `cache()` (Stata 16+)
 
 ## Installation
 
@@ -53,6 +59,10 @@ yaml validate, required(name version database)
 
 * Write modified configuration
 yaml write using output.yaml, replace
+
+* Speed-first metadata read (fastread)
+yaml read using indicators.yaml, fastread fields(name description source_id topic_ids) ///
+    listkeys(topic_ids topic_names) cache(ind_cache)
 ```
 
 ## Architecture
@@ -81,7 +91,7 @@ yaml write using output.yaml, replace
 │  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
 │  │  │   key    │   value    │ level │   parent   │   type   │        │     │
 │  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
-│  │  │ str244   │ str2045    │ int   │ str244     │ str32    │        │     │
+│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │        │     │
 │  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
 │                                                                              │
@@ -117,6 +127,19 @@ yaml read using filename.yaml [, options]
 - `scalars` - Store numeric values as scalars
 - `prefix(string)` - Prefix for local/scalar names (default: `yaml_`)
 - `verbose` - Display parsing details
+- `fastread` - Speed-first parsing for large, regular YAML
+- `fields(string)` - Restrict extraction to specific keys
+- `listkeys(string)` - Extract list blocks for specified keys (fastread only)
+- `blockscalars` - Capture block scalars in fast-read mode
+- `targets(string)` - Early-exit targets for canonical parse (exact keys)
+- `earlyexit` - Stop parsing once all targets are found (canonical)
+- `stream` - Use streaming tokenization for canonical parse
+- `index(string)` - Materialize an index frame for repeated queries (Stata 16+)
+- `cache(string)` - Cache parsed results in a frame (Stata 16+)
+
+## What's New
+
+See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ### yaml write
 
@@ -222,7 +245,7 @@ Lists only YAML frames in memory. Requires Stata 16+.
 ### yaml clear
 
 ```stata
-yaml clear [, all frame(name)]
+yaml clear [framename] [, all]
 ```
 
 ## Data Model
@@ -234,10 +257,22 @@ YAML data is stored in a flat dataset with hierarchical references:
 | Column | Type | Description |
 |--------|------|-------------|
 | `key` | str244 | Full hierarchical key name (e.g., `indicators_CME_MRY0T4_label`) |
-| `value` | str2045 | The value associated with the key |
-| `level` | int | Nesting depth (0 = root level) |
+| `value` | str2000 | The value associated with the key |
+| `level` | int | Nesting depth (1 = root level) |
 | `parent` | str244 | Parent key for hierarchical lookups |
 | `type` | str32 | Value type: `string`, `numeric`, `boolean`, `parent`, `list_item`, `null` |
+
+### Fast-Read Output Schema
+
+In `fastread` mode, the output is row-wise and minimal:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | str244 | Top-level key (e.g., indicator code) |
+| `field` | str244 | Field name under the key |
+| `value` | str2000 | Field value |
+| `list` | byte | 1 if list item, 0 otherwise |
+| `line` | long | Line number in the YAML file |
 
 ### Key Naming Convention
 
@@ -395,13 +430,35 @@ yaml get countries
 * Returns: r(1)="BRA" r(2)="ARG" r(3)="CHL"
 ```
 
+## Performance Optimization for Large Catalogs
+
+For metadata catalogs with 700+ entries, **vectorized frame-based queries** dramatically outperform iterative `yaml get` calls:
+
+| Approach | Time | Relative |
+|----------|------|----------|
+| Naive: 733 iterative `yaml get` calls | 15+ seconds | 50× |
+| **Optimized: Direct frame dataset query** | **0.3 seconds** | **1×** |
+
+**Key Pattern** (see paper Section 5.2):
+```stata
+yaml read using indicators_catalog.yaml, frame(meta)
+frame yaml_meta {
+    gen is_nutrition = (value == "NUTRITION") & ///
+        regexm(key, "^indicators_[A-Za-z0-9_]+_dataflow$")
+    levelsof indicator_code if is_nutrition == 1, local(nutrition_codes)
+}
+```
+
+Vectorized operations (gen, regexm, levelsof) process all rows at once rather than looping through function calls. Frame isolation provides data protection and instant cleanup. See production examples in `src/y/README.md`.
+
 ## Use Cases
 
 - **Pipeline Configuration**: Database connections, API endpoints, timeouts
-- **Metadata Management**: Indicator definitions, variable labels, units
+- **Metadata Management**: Indicator definitions, variable labels, units (optimized for 700+ catalogs)
 - **Cross-language Workflows**: Share configurations with R, Python, GitHub Actions
 - **Reproducible Research**: Version-controlled configuration files
 - **Multi-environment Support**: Dev/staging/prod configurations in separate frames
+- **LLM Workflows**: YAML-based tool interfaces and pipeline orchestration
 
 ## Design Principles
 
@@ -424,21 +481,38 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command (v1.3.0)
-│   └── yaml.sthlp          # Stata help file
+│   ├── yaml.ado           # Main command (v1.5.1)
+│   ├── yaml.sthlp         # Stata help file
+│   └── README.md          # Command documentation with production examples
 ├── examples/              # Examples and test files
 │   ├── README.md
-│   ├── test_yaml.do       # Main example script
+│   ├── yaml_sj_article_examples.do   # documented examples
+│   ├── yaml_basic_examples.do        # Basic usage examples
 │   ├── data/              # Sample YAML files
 │   └── logs/              # Output logs from examples
-└── paper/                 # Manuscript
-    └── main.pdf           # Compiled paper
+└── paper/submission/
+    └── latex/
+        ├── main-v2.tex         # LaTeX driver (original version, 19 pages)
+        ├── main-v3.tex         # LaTeX driver (current with optimization, 21 pages)
+        ├── yamlstata-v2.tex    # Article content (original)
+        ├── yamlstata-v3.tex    # Article content (Section 5.2: large catalog optimization)
+        ├── sj.bib              # Bibliography
+        ├── figures/
+        │   ├── yaml_layers_bw.tex    # TikZ source for architecture diagram
+        │   └── yaml_layers_bw.pdf    # Compiled architecture diagram (36 KB)
+        └── [support files]
 ```
 
 ## Suggested Citation
 
+**For the Stata command:**
+
 Azevedo, João Pedro. 2025. "yaml: Stata module for YAML file processing." 
 Statistical Software Components, Boston College Department of Economics.
+
+**For the project article:**
+
+Azevedo, João Pedro. 2025. "Reading and writing YAML files in Stata: A lightweight framework for reproducible and cross-platform analytics." *The project*, v3 (forthcoming). See `paper/submission/latex/main-v3.tex` for current version.
 
 ## Author
 

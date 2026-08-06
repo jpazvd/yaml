@@ -1,0 +1,24 @@
+# Minimal indicator metadata for fastread tests
+
+indicators:
+  CME_MRY0T4:
+    name: Under-five mortality rate
+    description: Probability of dying between birth and age 5
+    source_id: CME
+    topic_ids:
+      - CME
+      - MORT
+    topic_names:
+      - Child mortality
+      - Health
+
+  NT_ANT_HAZ_NE2:
+    name: Stunting prevalence
+    description: Children under 5 with height-for-age below -2 SD
+    source_id: NUTRITION
+    topic_ids:
+      - NUT
+      - HEALTH
+    topic_names:
+      - Nutrition
+      - Health

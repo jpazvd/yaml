@@ -1,0 +1,9 @@
+# Fixture for REG-06: fastread handles brackets/braces in values
+# Values containing [ ] { } should parse correctly
+
+api:
+  base_url: https://example.com/path[1]/data
+  query: filter[country]=BRA
+  docs: See section {overview} for details
+  note: Values with [brackets] and {braces} are valid
+  clean: normal value without special chars

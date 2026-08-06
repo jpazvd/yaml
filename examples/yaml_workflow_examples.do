@@ -1,8 +1,8 @@
-*! yaml_unicef_api_example.do
-*! Example: Working with UNICEF SDMX API Metadata in Stata
-*! Demonstrates using yaml to read and process indicator/dataflow metadata
+*! yaml_sj_article_examples.do
+*! End-to-end worked examples for the yaml command
+*! "Reading and writing YAML files in Stata"
 *! Author: João Pedro Azevedo
-*! Date: December 2024
+*! Date: December 2025
 
 * ==============================================================================
 * INTRODUCTION
@@ -30,16 +30,18 @@
 
 clear all
 set more off
+set linesize 80
 cap log close
 
 * Set working directory
-cd "<repo-root>"
+cap cd "<repo-root>"
+cap cd "cd <repo-root>"
 
 * Load the yaml command
 run "src/y/yaml.ado"
 
 * Start log
-log using "examples/yaml_unicef_api_example.log", replace text
+log using "examples/yaml_sj_article_examples.log", replace text
 
 * Display header
 display _n
@@ -95,6 +97,20 @@ if _rc {
 }
 
 if (`download_ok' == 1) {
+    * Rename variables to lowercase for consistency
+    * (SDMX API returns uppercase names like REF_AREA, INDICATOR, etc.)
+    capture rename REF_AREA ref_area
+    capture rename INDICATOR indicator
+    capture rename TIME_PERIOD time_period
+    capture rename OBS_VALUE obs_value
+    capture rename DATAFLOW dataflow
+    
+    * Generate dataflow from indicator prefix if not present
+    capture confirm variable dataflow
+    if _rc {
+        gen dataflow = substr(indicator, 1, strpos(indicator, "_") - 1)
+    }
+    
     * Show what we downloaded
     display as text "--- Downloaded data structure ---"
     describe, short
@@ -517,6 +533,9 @@ foreach ind in CME_MRY0T4 NT_ANT_HAZ_NE2_MOD IM_DTP3 {
     capture noisily {
         import delimited "`api_url'", clear varnames(1)
         
+        * Rename uppercase variables from SDMX API
+        capture rename OBS_VALUE obs_value
+        
         * Apply metadata from YAML
         label variable obs_value "`name' (`unit')"
         label data "`name' - SDG `sdg'"
@@ -754,6 +773,9 @@ foreach ind of local indicators_to_download {
     capture {
         preserve
         import delimited "`api_url'", clear varnames(1)
+        * Rename uppercase variables from SDMX API
+        capture rename TIME_PERIOD time_period
+        capture rename REF_AREA ref_area
         qui count
         local n_obs = r(N)
         qui sum time_period
@@ -856,6 +878,41 @@ display _n
 
 restore
 
+* ===========================================================================
+* PART 9: Large Catalog Optimization with Frames (Stata 16+)
+* ===========================================================================
+*
+* This example mirrors Section 5.2 of the paper: vectorized frame-based
+* queries that scale to 700+ metadata entries. Even though the sample file
+* here is small, the pattern is identical to production usage.
+
+display as result _n "{hline 70}"
+display as result "PART 9: Frame-based filtering for large catalogs"
+display as result "{hline 70}" _n
+
+* Load indicator metadata into an isolated frame
+yaml read using "`datadir'/unicef_indicators.yaml", frame(meta) replace
+
+* Vectorized filtering inside the frame (no per-row yaml get calls)
+frame yaml_meta {
+    gen is_nutrition = (value == "NUTRITION") & ///
+        regexm(key, "^indicators_[A-Za-z0-9_]+_dataflow$")
+    gen indicator_code = regexs(1) if ///
+        regexm(key, "^indicators_([A-Za-z0-9_]+)_dataflow$") & is_nutrition
+
+    levelsof indicator_code if is_nutrition == 1, local(nutrition_codes) clean
+
+    display as text "Nutrition indicators (vectorized lookup):"
+    foreach ind of local nutrition_codes {
+        levelsof value if key == "indicators_`ind'_name", local(ind_name) clean
+        levelsof value if key == "indicators_`ind'_sdg_target", local(ind_sdg) clean
+        di as result "  `ind': `ind_name' (SDG `ind_sdg')"
+    }
+}
+
+* Cleanup frame
+frame drop yaml_meta
+
 * ==============================================================================
 * CLEANUP
 * ==============================================================================
@@ -880,6 +937,7 @@ display as text "  5. Configuration-driven API query generation"
 display as text "  6. SDG indicator mapping"
 display as text "  7. Writing metadata summaries with yaml write"
 display as text "  8. Creating comprehensive download logs in YAML format"
+display as text "  9. Frame-based filtering for large catalogs (vectorized)"
 display _n
 
 display as text "KEY POINT: yaml write creates PHYSICAL FILES on disk."

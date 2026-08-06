@@ -8,6 +8,9 @@ discard
 
 * Set path to ado files
 adopath ++ "../src/y"
+adopath ++ "../src/_"
+capture program drop yaml
+run "../src/y/yaml.ado"
 
 di as text "{hline 70}"
 di as text "Testing YAML Improvements"
