@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.5.1  18Feb2026}{...}
+{* *! version 1.7.0  20Feb2026}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -88,6 +88,9 @@ Reads a YAML file and parses its contents into the current dataset (default) or 
 {synopt:{opt stream}}use streaming tokenization for canonical parse{p_end}
 {synopt:{opt index(string)}}materialize an index frame for repeated queries (Stata 16+){p_end}
 {synopt:{opt cache(string)}}cache parsed results in a frame (Stata 16+){p_end}
+{synopt:{opt bulk}}use Mata bulk-load parser for high-performance parsing{p_end}
+{synopt:{opt collapse}}produce wide-format output (use with {cmd:_yaml_collapse} helper){p_end}
+{synopt:{opt strl}}use strL storage for values exceeding 2045 characters{p_end}
 {synoptline}
 
 {pstd}
@@ -459,17 +462,26 @@ The {opt frame()} option requires Stata 16.0 or later.
 {pstd}
 {cmd:yaml} handles common YAML structures but does not support:
 
-{phang2}- Multi-line strings (block scalars){p_end}
 {phang2}- Anchors and aliases (&anchor, *alias){p_end}
 {phang2}- Complex keys{p_end}
 {phang2}- Flow style ({c -(}key: value{c )-}){p_end}
 {phang2}- Document markers (---){p_end}
 
 {pstd}
+{bf:Block scalars} (multi-line strings with {cmd:|} or {cmd:>}) are supported via
+{opt blockscalars} in fast-read mode and in the canonical parser.
+
+{pstd}
 {cmd:fastread} mode is optimized for shallow mappings and list blocks, and does not
 support anchors, aliases, or complex nested structures. Use the canonical parser
 for full YAML compliance.
-Block scalars can be captured in fast-read mode by adding {opt blockscalars}.
+
+{pstd}
+{bf:Phase 2 options} ({opt bulk}, {opt collapse}, {opt strl}) enable high-performance
+parsing via Mata. The {opt bulk} option uses a Mata-based parser that loads the
+entire file into memory for vectorized processing. Use {cmd:_yaml_collapse} after
+{opt bulk} to produce wide-format output with one row per top-level key.
+The {opt strl} option stores values as strL to allow values exceeding 2045 characters.
 
 
 {marker author}{...}
