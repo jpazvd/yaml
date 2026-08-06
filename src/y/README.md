@@ -10,26 +10,26 @@ The `yaml` command provides a complete YAML 1.2 (subset) parser for Stata, enabl
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              yaml.ado                                        │
+│                              yaml.ado                                       │
 │                         (dispatcher only)                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│   yaml_read.ado      yaml_write.ado     yaml_describe.ado     yaml_list.ado  │
-│   yaml_get.ado       yaml_validate.ado  yaml_dir.ado          yaml_frames.ado│
-│   yaml_clear.ado                                                        │
+│  yaml_read.ado     yaml_write.ado    yaml_describe.ado    yaml_list.ado     │
+│  yaml_get.ado      yaml_validate.ado yaml_dir.ado         yaml_frames.ado   │
+│  yaml_clear.ado                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Helpers (used by yaml_read):                                                │
-│   _yaml_fastread.ado    _yaml_tokenize_line.ado                               │
+│  _yaml_fastread.ado    _yaml_tokenize_line.ado                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                         Internal Storage                                     │
+│                         Internal Storage                                    │
 │  ┌────────────────────────────────────────────────────────────────────┐     │
 │  │  Dataset/Frame Structure:                                          │     │
-│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
-│  │  │   key    │   value    │ level │   parent   │   type   │        │     │
-│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
-│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │        │     │
-│  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
+│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐         │     │
+│  │  │   key    │   value    │ level │   parent   │   type   │         │     │
+│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤         │     │
+│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │         │     │
+│  │  └──────────┴────────────┴───────┴────────────┴──────────┘         │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -505,7 +505,6 @@ The `unicefdata` command (v1.4.0) uses this exact pattern:
 - One-off interactive exploration
 - Stata < 16 (use preserve/restore instead)
 - Simple key-value lookups (use `yaml_get`)
-```
 
 ## Version Requirements
 

@@ -1,8 +1,8 @@
 ﻿# YAML QA Protocol
 
-**Date:** 20Feb2026  
-**Version:** 2.0  
-**Total Tests:** 22
+**Date:** 21Feb2026  
+**Version:** 2.1  
+**Total Tests:** 26
 
 ## Purpose
 
@@ -30,7 +30,7 @@ Run the QA runner:
 do qa/run_tests.do
 ```
 
-This runs all 22 tests and writes logs to `qa/logs/run_tests.log`.
+This runs all 26 tests and writes logs to `qa/logs/run_tests.log`.
 
 ### Run Specific Test
 
@@ -73,7 +73,7 @@ do run_tests.do list
 | REG-07 | BUG-7 | Early-exit doesn't double-close handle |
 | REG-08 | BUG-8 | List header respects parent filter |
 
-### Feature (FEAT) - 8 tests
+### Feature (FEAT) - 9 tests
 | Test | Feature | Pass Criteria |
 |------|---------|---------------|
 | FEAT-01 | Double quotes | Mata `st_sstore` handles embedded quotes |
@@ -84,6 +84,14 @@ do run_tests.do list
 | FEAT-06 | Collapse | Wide-format output correct |
 | FEAT-07 | Performance | All parser modes complete within thresholds |
 | FEAT-08 | Frame queries | wbopendata-style operations work |
+| FEAT-09 | Collapse filters | colfields() and maxlevel() options work |
+
+### Integration (INT) - 3 tests
+| Test | Scope | Pass Criteria |
+|------|-------|---------------|
+| INT-01 | unicefdata | yaml → cache → lookup pipeline works |
+| INT-02 | wbopendata | yaml → cache → lookup pipeline works |
+| INT-03 | Version sync | yaml.ado versions match across packages |
 
 ### FEAT-08 Sub-tests (15 operations)
 1. Parse with bulk+collapse
@@ -119,7 +127,7 @@ Only if automated tests fail or for exploratory validation:
 
 ## Success Criteria
 
-- **22/22 tests pass** - All ENV, EX, REG, FEAT tests complete without error
+- **26/26 tests pass** - All ENV, EX, REG, FEAT, INT tests complete without error
 - **No rc != 0** - Automated runner reports zero failures
 - **Log clean** - `qa/logs/run_tests.log` shows all PASS
 

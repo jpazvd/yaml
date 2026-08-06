@@ -3,6 +3,7 @@
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
 [![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.9.0-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v1.9.0)
 
 ## Description
 
@@ -10,7 +11,7 @@
 
 The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This JSON-compatible subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** v1.7.0 with Mata bulk-load parser, collapsed wide-format output, and frame-based query operations.
+**Latest:** [v1.9.0](https://github.com/jpazvd/yaml/releases/tag/v1.9.0) with `indicators` preset for wbopendata/unicefdata, `colfields()` and `maxlevel()` filtering, and Mata bulk-load parser.
 
 ### Key Features
 
@@ -25,6 +26,8 @@ The command implements the **JSON Schema** subset of [YAML 1.2](https://yaml.org
 - **Frame caching** with `cache()` (Stata 16+)
 - **Mata bulk parser** for high-performance parsing (Phase 2)
 - **Collapse option** for wide-format indicator output (Phase 2)
+- **Collapse filters** with `colfields()` and `maxlevel()` (v1.8.0)
+- **Indicators preset** for wbopendata/unicefdata metadata (v1.9.0)
 - **strL support** for values exceeding 2045 characters
 
 ## Installation
@@ -66,38 +69,42 @@ yaml write using output.yaml, replace
 * Speed-first metadata read (fastread)
 yaml read using indicators.yaml, fastread fields(name description source_id topic_ids) ///
     listkeys(topic_ids topic_names) cache(ind_cache)
+
+* Parse wbopendata/unicefdata indicator metadata (v1.9.0)
+yaml read using indicators.yaml, indicators replace
+list key code name in 1/5
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              yaml.ado                                        │
+│                              yaml.ado                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌─────────┐    ┌─────────┐    ┌──────────┐                               │
-│   │  read   │    │  write  │    │ describe │                               │
-│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
-│        │              │              │                                       │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
-│   │  list   │    │   get   │    │ validate │                               │
-│   └────┬────┘    └────┬────┘    └────┬─────┘                               │
-│        │              │              │                                       │
-│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                               │
-│   │   dir   │    │  frames │    │  clear   │                               │
-│   └─────────┘    └─────────┘    └──────────┘                               │
-│                                                                              │
+│                                                                             │
+│   ┌─────────┐    ┌─────────┐    ┌──────────┐                                │
+│   │  read   │    │  write  │    │ describe │                                │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                                │
+│        │              │              │                                      │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                                │
+│   │  list   │    │   get   │    │ validate │                                │
+│   └────┬────┘    └────┬────┘    └────┬─────┘                                │
+│        │              │              │                                      │
+│   ┌────┴────┐    ┌────┴────┐    ┌────┴─────┐                                │
+│   │   dir   │    │  frames │    │  clear   │                                │
+│   └─────────┘    └─────────┘    └──────────┘                                │
+│                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                         Internal Storage                                     │
+│                         Internal Storage                                    │
 │  ┌────────────────────────────────────────────────────────────────────┐     │
 │  │  Dataset/Frame Structure:                                          │     │
-│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐        │     │
-│  │  │   key    │   value    │ level │   parent   │   type   │        │     │
-│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤        │     │
-│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │        │     │
-│  │  └──────────┴────────────┴───────┴────────────┴──────────┘        │     │
+│  │  ┌──────────┬────────────┬───────┬────────────┬──────────┐         │     │
+│  │  │   key    │   value    │ level │   parent   │   type   │         │     │
+│  │  ├──────────┼────────────┼───────┼────────────┼──────────┤         │     │
+│  │  │ str244   │ str2000    │ int   │ str244     │ str32    │         │     │
+│  │  └──────────┴────────────┴───────┴────────────┴──────────┘         │     │
 │  └────────────────────────────────────────────────────────────────────┘     │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -114,6 +121,10 @@ yaml read using indicators.yaml, fastread fields(name description source_id topi
 | `yaml dir` | List all YAML data in memory (dataset and frames) |
 | `yaml frames` | List only YAML frames in memory (Stata 16+) |
 | `yaml clear` | Clear YAML data from memory or frames |
+
+## What's New
+
+See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ## Syntax
 
@@ -141,11 +152,10 @@ yaml read using filename.yaml [, options]
 - `cache(string)` - Cache parsed results in a frame (Stata 16+)
 - `bulk` - Use Mata bulk-load parser for high-performance parsing (Phase 2)
 - `collapse` - Produce wide-format output with `_yaml_collapse` (Phase 2)
+- `colfields(string)` - Filter collapsed output to specific field names (semicolon-separated)
+- `maxlevel(#)` - Limit collapsed columns by nesting depth
+- `indicators` - Preset for wbopendata/unicefdata indicator metadata (implies bulk collapse)
 - `strl` - Use strL storage for values exceeding 2045 characters
-
-## What's New
-
-See [src/y/yaml_whatsnew.sthlp](src/y/yaml_whatsnew.sthlp) for version history and release notes.
 
 ### yaml write
 
@@ -445,7 +455,7 @@ For metadata catalogs with 700+ entries, **vectorized frame-based queries** dram
 | Naive: 733 iterative `yaml get` calls | 15+ seconds | 50× |
 | **Optimized: Direct frame dataset query** | **0.3 seconds** | **1×** |
 
-**Key Pattern** (see paper Section 5.2):
+**Key Pattern:**
 ```stata
 yaml read using indicators_catalog.yaml, frame(meta)
 frame yaml_meta {
@@ -494,27 +504,16 @@ yaml/
 │   ├── _yaml_mataread.ado # Mata bulk-load parser (Phase 2)
 │   └── _yaml_collapse.ado # Wide-format collapse helper (Phase 2)
 ├── qa/
-│   ├── run_tests.do       # QA runner (22 tests)
+│   ├── run_tests.do       # QA runner (26 tests)
 │   ├── README.md          # QA framework documentation
 │   ├── scripts/           # Test scripts (20 files)
 │   └── fixtures/          # Test fixtures
 ├── examples/              # Examples and test files
 │   ├── README.md
-│   ├── yaml_sj_article_examples.do   # documented examples
 │   ├── yaml_basic_examples.do        # Basic usage examples
 │   ├── data/              # Sample YAML files
 │   └── logs/              # Output logs from examples
-└── paper/submission/
-    └── latex/
-        ├── main-v2.tex         # LaTeX driver (original version, 19 pages)
-        ├── main-v3.tex         # LaTeX driver (current with optimization, 21 pages)
-        ├── yamlstata-v2.tex    # Article content (original)
-        ├── yamlstata-v3.tex    # Article content (Section 5.2: large catalog optimization)
-        ├── sj.bib              # Bibliography
-        ├── figures/
-        │   ├── yaml_layers_bw.tex    # TikZ source for architecture diagram
-        │   └── yaml_layers_bw.pdf    # Compiled architecture diagram (36 KB)
-        └── [support files]
+└── paper/                 # Documentation and article source
 ```
 
 ## Suggested Citation
@@ -523,10 +522,6 @@ yaml/
 
 Azevedo, João Pedro. 2025. "yaml: Stata module for YAML file processing." 
 Statistical Software Components, Boston College Department of Economics.
-
-**For the project article:**
-
-Azevedo, João Pedro. 2025. "Reading and writing YAML files in Stata: A lightweight framework for reproducible and cross-platform analytics." *The project*, v3 (forthcoming). See `paper/submission/latex/main-v3.tex` for current version.
 
 ## Author
 
