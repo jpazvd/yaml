@@ -1,0 +1,56 @@
+# Fixture: sibling parent_stack contamination test (BUG-9)
+# Tests that adjacent parent keys (with list children) at the same indent
+# do not contaminate each other's field names after collapse.
+# Also tests empty YAML arrays [] are handled correctly.
+
+indicators:
+  SP.POP.TOTL:
+    code: SP.POP.TOTL
+    name: "Population, total"
+    source_id: 2
+    source_name: World Development Indicators
+    description: >-
+      Total population is based on the de facto
+      definition of population.
+    unit: persons
+    topic_ids:
+      - 19
+      - 8
+    topic_names:
+      - "Climate Change"
+      - "Health"
+    source_org: "(1) United Nations Population Division."
+    note: >-
+      Estimates are based on various sources including
+      census and survey data.
+    limited_data: 0
+
+  DT.DOD.DECT.CD:
+    code: DT.DOD.DECT.CD
+    name: External debt stocks, total (DOD, current US$)
+    source_id: 6
+    source_name: International Debt Statistics
+    description: >-
+      Total external debt is the sum of public, publicly
+      guaranteed, and private nonguaranteed long-term debt.
+    unit: current US$
+    topic_ids:
+      - 20
+    topic_names:
+      - "External Debt"
+    source_org: World Bank, International Debt Statistics.
+    note: Debt data are in current U.S. dollars.
+    limited_data: 0
+
+  EMPTY.TOPICS:
+    code: EMPTY.TOPICS
+    name: Indicator with no topics
+    source_id: 57
+    source_name: WDI Database Archives
+    description: An indicator that has empty topic arrays.
+    unit: ""
+    topic_ids: []
+    topic_names: []
+    source_org: World Bank staff estimates.
+    note: ""
+    limited_data: 1

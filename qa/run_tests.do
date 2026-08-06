@@ -42,6 +42,7 @@ foreach arg of local args {
 		di as text "  REG-06   fastread handles brackets/braces in values (BUG-6)"
 		di as text "  REG-07   early-exit does not double-close file handle (BUG-7)"
 		di as text "  REG-08   yaml list header with parent filter (BUG-8)"
+		di as text "  REG-09   sibling parent_stack contamination (BUG-9)"
 		di as text ""
 		di as text "  Feature Tests (v1.6.0):"
 		di as text "  FEAT-01  embedded double quotes via Mata st_sstore"
@@ -387,6 +388,20 @@ if "`target_test'" == "" | "`target_test'" == "REG-08" {
 	}
 	else {
 		test_fail, id("REG-08") msg("test_list_header.do failed (rc=`erc')")
+	}
+}
+
+* REG-09: sibling parent_stack contamination (BUG-9)
+if "`target_test'" == "" | "`target_test'" == "REG-09" {
+	test_start, id("REG-09") desc("sibling parent_stack contamination (BUG-9)")
+	capture quietly do "`qadir'/scripts/test_sibling_parent_stack.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-09")
+	}
+	else {
+		test_fail, id("REG-09") msg("test_sibling_parent_stack.do failed (rc=`erc')")
 	}
 }
 
