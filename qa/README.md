@@ -6,33 +6,44 @@ This folder contains QA protocols and scripts for validating the `yaml` Stata mo
 
 | Metric | Value |
 |--------|-------|
-| **Total Tests** | 27 |
-| **Test Families** | ENV, EX, REG, FEAT, INT |
+| **Total Tests** | 35 |
+| **Test Families** | ENV (3), EX (3), REG (17), FEAT (9), INT (3) |
 | **Runner** | `qa/run_tests.do` |
 | **Log file** | `qa/logs/run_tests.log` (gitignored) |
 | **History** | `qa/test_history.txt` |
 
 ## Running Tests
 
+Run from the **repository root**, not from `qa/`. The runner takes `c(pwd)`
+as the repo root and derives `qa/`, `src/y` and `src/_` from it, so a
+different working directory points every one of those at a path that does
+not exist. `adopath` then fails to pick up the working tree and `yaml`
+resolves to whatever copy is already installed — the suite runs green
+against code you did not change.
+
+Nothing in the suite currently detects this. ENV-01 checks that a `yaml`
+command is available, and one is: the installed one. That is why the
+working directory matters more than it looks.
+
 ### Full suite
 ```stata
-cd <repo-root>/qa
-do run_tests.do
+cd <repo-root>
+do qa/run_tests.do
 ```
 
 ### Single test
 ```stata
-do run_tests.do EX-01
+do qa/run_tests.do EX-01
 ```
 
 ### List available tests
 ```stata
-do run_tests.do list
+do qa/run_tests.do list
 ```
 
 ### Verbose mode
 ```stata
-do run_tests.do verbose
+do qa/run_tests.do verbose
 ```
 
 ## Test Families
@@ -55,8 +66,10 @@ Runs example scripts to validate core workflows.
 | EX-02 | `examples/test_yaml_improvements.do` |
 | EX-03 | `examples/yaml_basic_examples.do` |
 
-### 3. Regression Tests (REG) - 9 tests
-Targeted regression tests for specific bug fixes.
+### 3. Regression Tests (REG) - 17 tests
+Targeted regression tests for specific bug fixes. Every fixed bug gets a REG
+test that fails before the fix and passes after, so a regression cannot pass
+silently.
 
 | Test ID | Description | Bug Ref |
 |---------|-------------|---------|
@@ -69,6 +82,20 @@ Targeted regression tests for specific bug fixes.
 | REG-07 | Early-exit does not double-close file handle | BUG-7 |
 | REG-08 | `yaml list header` with parent filter | BUG-8 |
 | REG-09 | Sibling parent_stack contamination | BUG-9 |
+| REG-10 | Flush-dash sequences of mappings | BUG-10 |
+| REG-11 | Consumer catalog corpus parses | BUG-10 |
+| REG-12 | Consumer catalog round-trip fidelity | - |
+| REG-13 | `yaml list` `stata` option compound quotes | BUG-11 |
+| REG-14 | `yaml write, scalars()` emits scalars | BUG-12 |
+| REG-15 | Generated harmonization do-file runs | BUG-13 |
+| REG-16 | Quote characters in values parse | BUG-14 |
+| REG-17 | Counterfactual: v2.0.0 fails, current passes | BUG-15 |
+
+REG-17 is the pattern worth copying. It materialises the *previous* build from
+git history, asserts the bug still reproduces against it, and only then asserts
+the current tree is clean. A test that merely checks the fixed behaviour can
+quietly degrade into one that would pass against the broken code too; this one
+cannot.
 
 ### 4. Feature Tests (FEAT) - 9 tests
 New feature validation for v1.6.0+ and Phase 2 (Mata parser).
@@ -105,8 +132,13 @@ Validates frame caching and query patterns used by wbopendata/unicefData:
 15. **Regex wildcard `.`** - single character pattern
 
 ### 5. Integration Tests (INT) - 3 tests
-Cross-package integration with downstream consumers (skipped when the sibling
-repos are absent; INT-02/INT-03 fail while siblings bundle an older yaml).
+Cross-package integration with downstream consumers. These are skipped when the
+sibling repos are absent from the machine.
+
+**INT-02 and INT-03 are red by design** and are the only accepted failures: they
+check sibling packages that have not yet re-aligned to v2.0.x, and stay red
+until they do at the SSC release. Any *other* failure is a stop. Do not "fix"
+the suite by making these two green.
 
 | Test ID | Description |
 |---------|-------------|
@@ -122,7 +154,8 @@ repos are absent; INT-02/INT-03 fail while siblings bundle an older yaml).
 | `fixtures/` | Test fixtures and sample YAML files |
 | `legacy/` | Legacy QA artifacts kept for reference |
 | `logs/` | Execution logs (gitignored) |
-| `scripts/` | Test scripts (22 files) |
+| `scripts/` | Test scripts (32 files) |
+| `tmp/` | Scratch space written during a run (gitignored) |
 
 ## Entry Points
 
@@ -131,6 +164,19 @@ repos are absent; INT-02/INT-03 fail while siblings bundle an older yaml).
 | `run_tests.do` | Primary QA runner |
 | `test_protocol.md` | Step-by-step QA protocol |
 | `TESTING_GUIDE.md` | How to run QA locally |
-| `test_history.txt` | Log of QA runs |
+| `test_history.txt` | Append-only record of every QA run (see note) |
 | `_define_helpers.do` | Helper programs |
 | `_unpack_fixtures.do` | Fixture extraction |
+
+### About `test_history.txt`
+
+Each run appends a stanza recording the date, start and end time, duration,
+branch, package version, Stata version, and the pass / fail / skip counts with
+the ids of anything that failed. It is append-only: entries are never edited or
+removed, so a run that went badly stays in the record.
+
+In this published copy, branch names are shown as `(feature branch)` unless the
+run was made on `main`, `dev` or `develop`. The redaction is an allow-list
+applied at publication time — everything not explicitly permitted is replaced,
+so no future branch name can reach this file by being overlooked. Nothing else
+in the stanza is altered, and no run is omitted.

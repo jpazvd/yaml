@@ -50,14 +50,14 @@ This runs all 35 tests and writes logs to `qa/logs/run_tests.log`.
 ### Run Specific Test
 
 ```stata
-do run_tests.do FEAT-08
-do run_tests.do REG-05
+do qa/run_tests.do FEAT-08
+do qa/run_tests.do REG-05
 ```
 
 ### List Available Tests
 
 ```stata
-do run_tests.do list
+do qa/run_tests.do list
 ```
 
 ## Test Coverage
