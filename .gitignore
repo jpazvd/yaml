@@ -1,0 +1,110 @@
+﻿# =============================================================================
+# .gitignore for yaml Stata package
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# LaTeX auxiliary files (sj-manuscript)
+# -----------------------------------------------------------------------------
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.toc
+!stata.toc
+!src/stata.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.pdfsync
+*.dvi
+*.ps
+*.pp
+*.pp1
+*.tag
+paper/*.pdf
+!paper/*-v[0-9]*.pdf
+
+# Keep the compiled PDF for review (optional - remove if you want to exclude)
+*.pdf
+
+# Reference copies for the R&R: author-authorized to commit. Some items carry
+# publisher copyright (Nature, StataCorp); see paper/R&R/references/README.md
+# for per-file provenance and licence.
+!paper/R&R/references/*.pdf
+
+# Figure shipped with the R&R package: the revised manuscript includes
+# figures/yaml_layers_bw.pdf, so it must be tracked for main-v4.tex to compile.
+!paper/R&R/latex/figures/*.pdf
+
+# Response letter is a send-time attachment (not in the zip); track the exact
+# PDF sent to the editor. Regenerate from response-letter.md with:
+#   pandoc response-letter.md -o response-letter.pdf --pdf-engine=lualatex \
+#     -V geometry:margin=1in -V fontsize=11pt -V colorlinks=true
+!paper/R&R/response-letter.pdf
+
+# -----------------------------------------------------------------------------
+# Stata temporary/log files
+# -----------------------------------------------------------------------------
+*.smcl
+*.gph
+*.dta
+tests/*.log
+tests/output/
+
+# R&R example-run artifacts shipped in the SJ package (audit trail; the article's
+# stlogs are taken verbatim from the log, so these are tracked for reproducibility).
+# Placed AFTER the blanket *.dta / *.log rules so these exceptions win.
+!paper/R&R/examples/yaml_sj_article_examples.log
+!paper/R&R/examples/*.dta
+
+# -----------------------------------------------------------------------------
+# OS generated files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Editor/IDE files
+# -----------------------------------------------------------------------------
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# Backup files
+# -----------------------------------------------------------------------------
+*.bak
+*.backup
+*.orig
+*.old
+
+# -----------------------------------------------------------------------------
+# Temporary files
+# -----------------------------------------------------------------------------
+*.tmp
+*.temp
+~$*
+# Large test fixtures (download separately)
+qa/fixtures/_wbopendata_indicators.yaml
+
+# -----------------------------------------------------------------------------
+# QA fixtures (extracted from fixtures.zip on first run)
+# -----------------------------------------------------------------------------
+qa/fixtures/*.yaml
+
+# R&R staging run directory (generated; audit-trail files ship in the SJ package zip)
+paper/R&R/package-run/
+__pycache__/

@@ -1,7 +1,7 @@
 *******************************************************************************
 *! ex_wbod_vectorized_parse.do
 *! Vectorized YAML parser — wbopendata approach
-*! Reference: __wbod_parse_yaml_ind.ado v1.0.10 (wbopendata)
+*! Reference: __wbod_parse_yaml_ind.ado v1.0.10 (downstream package)
 *!
 *! Architecture:
 *!   1. file read → slurp ALL lines into strL column (one obs per line)

@@ -32,9 +32,7 @@ set more off
 set linesize 80
 cap log close
 
-* Set working directory
-cap cd "<repo-root>"
-cap cd "cd <repo-root>"
+* Run this from the repository root, where src/ and examples/ live.
 
 * Load the yaml command
 run "src/y/yaml.ado"

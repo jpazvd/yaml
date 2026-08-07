@@ -1,10 +1,25 @@
 ﻿# YAML QA Protocol
 
-**Date:** 21Feb2026  
-**Version:** 2.1  
-**Total Tests:** 26
+**Date:** 06Aug2026  
+**Version:** 2.2  
+**Total Tests:** 35 (the runner prints the authoritative per-run count in its summary)
 
 ## Purpose
+
+**Bug-fix principle (adopted 2026-08-06, first applied to BUG-15/REG-17):**
+every bug fixed in the package MUST be reproduced by a test wired into
+`qa/run_tests.do` before the fix lands, and the bug counts as fixed only
+when that test (a) demonstrably FAILS against the pre-fix build and
+(b) passes against the fixed build. Where practical, encode the
+counterfactual inside the test itself by materializing the pre-fix code
+from git (see `test_bug15_counterfactual.do` / REG-17); otherwise run the
+test once against the pre-fix tree and record the failing rc in the
+commit message. A regression test that has never been seen to fail proves
+nothing -- the suite's own history shows why: EX-01 asserted only on
+return codes and passed for two major versions while `scalars()` wrote
+nothing at all.
+
+
 
 Ensure the `yaml` Stata module works correctly across all subcommands
 (read/write/list/get/validate) and Phase 2 features (bulk/collapse/frame operations).
@@ -30,7 +45,7 @@ Run the QA runner:
 do qa/run_tests.do
 ```
 
-This runs all 26 tests and writes logs to `qa/logs/run_tests.log`.
+This runs all 35 tests and writes logs to `qa/logs/run_tests.log`.
 
 ### Run Specific Test
 
@@ -127,13 +142,24 @@ Only if automated tests fail or for exploratory validation:
 
 ## Success Criteria
 
-- **26/26 tests pass** - All ENV, EX, REG, FEAT, INT tests complete without error
-- **No rc != 0** - Automated runner reports zero failures
-- **Log clean** - `qa/logs/run_tests.log` shows all PASS
+- **33/35 tests pass** - every ENV, EX, REG, FEAT and CON test completes
+  without error.
+- **INT-02 and INT-03 are RED BY DESIGN** and are the only accepted
+  failures. They compare this package against sibling repos on disk and
+  stay red until those siblings re-vendor at the SSC release. Any *other*
+  failure is a stop. Do not "fix" the suite by making these green.
+- **No unexplained rc != 0** - the runner summary count is authoritative,
+  and is reconciled against the declared roster in the listing block, so a
+  test that silently stops running shows as a shortfall rather than as a
+  smaller number of passes.
+- **Log parseable** - `qa/logs/run_tests.log` carries line-initial `PASS:`
+  / `FAIL:` / `SKIP:` watermarks plus the completion sentinel, so
+  `stqa_scanlog` can re-derive the verdict independently of the runner own
+  counters.
 
 ## Logging
 
 | File | Purpose |
 |------|---------|
 | `qa/logs/run_tests.log` | Current run log (gitignored) |
-| `qa/test_history.txt` | Append-only test history |
+| `qa/test_history.txt` | Append-only test history (maintainer-local; excluded from the public package) |

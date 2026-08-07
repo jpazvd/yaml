@@ -1,7 +1,8 @@
 *! test_collapse.do
 *! Feature test FEAT-06: collapse option produces wide-format output
 *! Date: 19Feb2026
-*! Status: Phase 2 acceptance test — skips until COLLAPSE option is implemented
+*! Status: active — COLLAPSE shipped in v1.7.0. The rc==198 branch below is a
+*!         legacy guard for installs predating that release.
 
 clear all
 set more off
@@ -19,7 +20,7 @@ local all_pass = 1
 
 capture yaml read using "`fixture'", replace blockscalars collapse
 if (_rc == 198) {
-    di as text "FEAT-06 SKIP: COLLAPSE option not yet implemented"
+    di as text "FEAT-06 SKIP: COLLAPSE option unavailable — requires yaml v1.7.0 or later"
     exit 0
 }
 if (_rc != 0) {
