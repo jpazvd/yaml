@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.0  26Jul2026}{...}
+{* *! version 2.0.1  06Aug2026}{...}
 {vieweralsosee "yaml examples" "help yaml_examples"}{...}
 {vieweralsosee "yaml what's new" "help yaml_whatsnew"}{...}
 {vieweralsosee "" "--"}{...}
@@ -14,7 +14,7 @@
 {viewerjumpto "References" "yaml##references"}{...}
 {viewerjumpto "Author" "yaml##author"}{...}
 {hline}
-{cmd:help yaml}{right:{bf:version 2.0.0}}
+{cmd:help yaml}{right:{bf:version 2.0.1}}
 {hline}
 
 {title:Title}

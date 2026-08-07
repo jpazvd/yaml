@@ -1,7 +1,9 @@
 *******************************************************************************
 * yaml_write
-*! v 2.0.0   27Jul2026               by Joao Pedro Azevedo (UNICEF)
+*! v 2.0.1   06Aug2026               by Joao Pedro Azevedo (UNICEF)
 * Write Stata data to YAML file
+* v 2.0.1: scalars() writes quote-bearing string scalars safely (compound
+*   quotes on the scalar line; plain quotes aborted r(198) mid-file).
 * v 2.0.0: (1) emit sequences of mappings: a type=="list_map" row prints as a
 *   dash item, with its first child folded onto the dash line and remaining
 *   children indented beneath it, so map lists round-trip to dash form;
@@ -68,7 +70,11 @@ program define yaml_write
             if (_rc == 0) {
                 * plain expression assignment so string scalars work too
                 local val = `s'
-                file write `fh' "`s': `val'" _n
+                * Compound quotes: a string scalar whose value contains a
+                * double quote would otherwise terminate the string early,
+                * aborting r(198) and leaving a truncated file behind. The
+                * main write path below already uses this form.
+                file write `fh' `"`s': `val'"' _n
             }
         }
     }

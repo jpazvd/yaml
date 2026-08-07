@@ -50,6 +50,7 @@ foreach arg of local args {
 		di as text "  REG-14   yaml write scalars() emits scalars (BUG-12)"
 		di as text "  REG-15   generated harmonization do-file runs (BUG-13)"
 		di as text "  REG-16   quote characters in values parse (BUG-14)"
+		di as text "  REG-17   BUG-15 counterfactual (v2.0.0 fails, current passes)"
 		di as text ""
 		di as text "  Feature Tests (v1.6.0):"
 		di as text "  FEAT-01  embedded double quotes via Mata st_sstore"
@@ -509,6 +510,22 @@ if "`target_test'" == "" | "`target_test'" == "REG-16" {
 	else {
 		test_fail, id("REG-16") msg("test_quotes_in_values.do failed (rc=`erc')")
 	}
+
+* REG-17: BUG-15 counterfactual -- materializes v2.0.0 yaml_write from git,
+* proves the quote-bearing scalars() write fails there (198 abort, truncated
+* file, 602 lockout), then proves the current build passes verbatim
+if "`target_test'" == "" | "`target_test'" == "REG-17" {
+	test_start, id("REG-17") desc("BUG-15 counterfactual (v2.0.0 fails, current passes)")
+	capture quietly do "`qadir'/scripts/test_bug15_counterfactual.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	if `erc' == 0 {
+		test_pass, id("REG-17")
+	}
+	else {
+		test_fail, id("REG-17") msg("test_bug15_counterfactual.do failed (rc=`erc')")
+	}
+}
 }
 
 *===============================================================================

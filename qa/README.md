@@ -16,7 +16,7 @@ This folder contains QA protocols and scripts for validating the `yaml` Stata mo
 
 ### Full suite
 ```stata
-cd <repo-root>
+cd <repo-root>/qa
 do run_tests.do
 ```
 

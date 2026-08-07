@@ -1,7 +1,8 @@
 {smcl}
-{* *! version 2.0.0  26Jul2026}{...}
+{* *! version 2.0.1  06Aug2026}{...}
 {vieweralsosee "yaml" "help yaml"}{...}
 {vieweralsosee "yaml examples" "help yaml_examples"}{...}
+{viewerjumpto "v2.0.1" "yaml_whatsnew##v201"}{...}
 {viewerjumpto "v2.0.0" "yaml_whatsnew##v200"}{...}
 {viewerjumpto "v1.9.2" "yaml_whatsnew##v192"}{...}
 {viewerjumpto "v1.9.0" "yaml_whatsnew##v190"}{...}
@@ -13,7 +14,7 @@
 {viewerjumpto "v1.4.0" "yaml_whatsnew##v140"}{...}
 {viewerjumpto "v1.3.1" "yaml_whatsnew##v131"}{...}
 {hline}
-{cmd:help yaml what's new}{right:{bf:version 2.0.0}}
+{cmd:help yaml what's new}{right:{bf:version 2.0.1}}
 {hline}
 
 {title:What's New in yaml}
@@ -22,6 +23,15 @@
 {it:Return to {help yaml:main help file}}
 {p_end}
 
+
+{marker v201}{...}
+{title:Version 2.0.1 (06Aug2026)}
+
+{pstd}
+{bf:scalars() quote safety} {hline 2} {cmd:yaml write, scalars()} now writes
+string scalars whose values contain double quotes. Previously the scalar
+line used plain quotes, so such a value terminated the write with r(198)
+and left a truncated file on disk.
 
 {marker v200}{...}
 {title:Version 2.0.0 (26Jul2026)}

@@ -2,6 +2,16 @@
 
 All notable changes to the yaml Stata package will be documented in this file.
 
+## [2.0.1] - 2026-08-06
+
+### Fixed
+
+- `yaml write, scalars()`: a string scalar whose value contains a double
+  quote no longer aborts the write with r(198) (which also left a truncated
+  file on disk). The scalar line now uses compound quotes, matching the
+  main write path. Regression covered in `qa/scripts/test_write_scalars.do`
+  (BUG-15).
+
 ## [2.0.0] - 2026-07-26
 
 Major version. Driven by re-running the documented examples end-to-end

@@ -1,7 +1,7 @@
 *******************************************************************************
 *! ex_unicef_vectorized_parse.do
 *! Vectorized YAML parser — unicefData approach
-*! Reference: __unicef_parse_indicators_yaml.ado v1.0.0 (unicefData)
+*! Reference: __unicef_parse_indicators_yaml.ado v1.0.0 (downstream package)
 *!
 *! Architecture: Same as wbopendata vectorized parser but with
 *! UNICEF-specific fields (urn, tier, dataflows, disaggregations).

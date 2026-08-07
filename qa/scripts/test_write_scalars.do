@@ -3,6 +3,9 @@
 *! Before the fix the guard was "capture scalar `s'", which is not a validity
 *! test (a bare "scalar name" is not a command and returns rc 100 even when the
 *! scalar exists), so every scalar was skipped and only the header was written.
+*! Also covers BUG-15: a string scalar containing a double quote must not
+*! abort the write. The scalar line used plain quotes, so such a value
+*! terminated the string early and aborted r(198), leaving a truncated file.
 clear all
 set more off
 
@@ -15,9 +18,10 @@ quietly summarize price
 scalar n_cars = r(N)
 scalar mean_price = round(r(mean), .01)
 scalar src = "1978 Automobile Data"
+scalar quoted = `"a "quoted" value"'
 
 tempfile out
-yaml write using "`out'", scalars(n_cars mean_price src) replace
+yaml write using "`out'", scalars(n_cars mean_price src quoted) replace
 
 * read the emitted file back and check every scalar survived
 yaml read using "`out'", replace
@@ -40,6 +44,16 @@ if (r(N) != 1) {
     di as error "WRITE-SCALARS FAIL: string scalar src not emitted verbatim"
     local pass = 0
 }
+* BUG-15 round trip: a quote-bearing string scalar must be WRITTEN without
+* aborting, and the READ side (BUG-14 quoting rule) must return the value
+* verbatim -- interior quotes are not a matching surrounding pair, so
+* nothing may be stripped. This asserts both directions at once.
+qui count if key == "quoted" & value == `"a "quoted" value"'
+if (r(N) != 1) {
+    di as error "WRITE-SCALARS FAIL: quote-bearing scalar did not round-trip verbatim (BUG-15)"
+    local pass = 0
+}
+
 * pre-fix signature: nothing but the header, i.e. zero parsed keys
 qui count
 if (r(N) < 3) {
