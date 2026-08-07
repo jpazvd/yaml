@@ -11,7 +11,18 @@ cd <repo-root>
 . do qa/run_tests.do
 ```
 
-## What It Runs (26 Tests)
+## What It Runs
+
+The suite is 35 tests across five families. The tables below map the main
+ones to the scripts that implement them, as an orientation aid — they are
+**not a complete roster**, and REG-09 onward are deliberately not repeated
+here.
+
+The authoritative roster is [`README.md`](README.md), and the runner itself
+is the final word: `do qa/run_tests.do list` prints exactly what will run.
+Two hand-maintained rosters drift apart, which is how this guide came to
+claim 26 tests for a 35-test suite; there is one roster now, and this is
+not it.
 
 ### Environment Checks (ENV)
 - ENV-01: `yaml` command is available
@@ -68,8 +79,8 @@ Key fixtures:
 To run a specific test:
 
 ```stata
-do run_tests.do FEAT-08
-do run_tests.do REG-05
+do qa/run_tests.do FEAT-08
+do qa/run_tests.do REG-05
 ```
 
 ## Logs
@@ -91,5 +102,5 @@ do run_tests.do REG-05
 For detailed trace output:
 
 ```stata
-do run_tests.do verbose
+do qa/run_tests.do verbose
 ```
