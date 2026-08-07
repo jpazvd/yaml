@@ -3,7 +3,7 @@
 [![Stata Version](https://img.shields.io/badge/Stata-14%2B-blue)](https://www.stata.com/)
 [![YAML 1.2](https://img.shields.io/badge/YAML-1.2-orange)](https://yaml.org/spec/1.2.2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v2.0.0)
+[![Version](https://img.shields.io/badge/version-2.0.1-brightgreen)](https://github.com/jpazvd/yaml/releases/tag/v2.0.1)
 
 ## Description
 
@@ -11,7 +11,9 @@
 
 The command implements a **restricted block-style subset** of [YAML 1.2](https://yaml.org/spec/1.2.2/) (3rd Edition, 2021), the current authoritative YAML standard. This subset covers the most commonly used features for configuration files and metadata management. It is implemented in pure Stata with no external dependencies.
 
-**Latest:** [v2.0.0](https://github.com/jpazvd/yaml/releases/tag/v2.0.0) — sequences of mappings (`list_map`), unified quoting rule across all three parsers, `yaml write` boolean/null fidelity, multi-level colon paths in `yaml get`, and `r(found)` from `yaml list`.
+**Latest:** [v2.0.1](https://github.com/jpazvd/yaml/releases/tag/v2.0.1) — a patch on v2.0.0. `yaml write, scalars()` accepts string scalars whose values contain a double quote; previously it stopped with an error partway through and left a truncated file.
+
+**Current feature set:** [v2.0.0](https://github.com/jpazvd/yaml/releases/tag/v2.0.0) added sequences of mappings (`list_map`), a unified quoting rule across all three parsers, boolean and null fidelity in `yaml write`, multi-level colon paths in `yaml get`, and `r(found)` from `yaml list`. See the [CHANGELOG](CHANGELOG.md) for earlier releases.
 
 ### Key Features
 
@@ -497,14 +499,14 @@ yaml/
 ├── README.md              # This file
 ├── .gitignore
 ├── src/y/
-│   ├── yaml.ado           # Main command dispatcher (v2.0.0)
+│   ├── yaml.ado           # Main command dispatcher (v2.0.1)
 │   ├── yaml.sthlp         # Stata help file
 │   └── README.md          # Command documentation with production examples
 ├── src/_/
 │   ├── _yaml_mataread.ado # Mata bulk-load parser (v1.7.0)
 │   └── _yaml_collapse.ado # Wide-format collapse helper (v1.7.0)
 ├── qa/
-│   ├── run_tests.do       # QA runner (27 tests)
+│   ├── run_tests.do       # QA runner (35 tests)
 │   ├── README.md          # QA framework documentation
 │   ├── scripts/           # Test scripts (22 files)
 │   └── fixtures/          # Test fixtures
