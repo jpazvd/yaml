@@ -13,7 +13,7 @@ cd <repo-root>
 
 ## What It Runs
 
-The suite is 35 tests across five families. The tables below map the main
+The suite is 36 tests across five families. The tables below map the main
 ones to the scripts that implement them, as an orientation aid — they are
 **not a complete roster**, and REG-09 onward are deliberately not repeated
 here.
@@ -21,8 +21,8 @@ here.
 The authoritative roster is [`README.md`](README.md), and the runner itself
 is the final word: `do qa/run_tests.do list` prints exactly what will run.
 Two hand-maintained rosters drift apart, which is how this guide came to
-claim 26 tests for a 35-test suite; there is one roster now, and this is
-not it.
+claim 26 tests at a point when the suite had already reached 35; there is one
+roster now, and this is not it.
 
 ### Environment Checks (ENV)
 - ENV-01: `yaml` command is available

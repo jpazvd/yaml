@@ -45,7 +45,7 @@ Run the QA runner:
 do qa/run_tests.do
 ```
 
-This runs all 35 tests and writes logs to `qa/logs/run_tests.log`.
+This runs all 36 tests and writes logs to `qa/logs/run_tests.log`.
 
 ### Run Specific Test
 
@@ -142,7 +142,7 @@ Only if automated tests fail or for exploratory validation:
 
 ## Success Criteria
 
-- **33/35 tests pass** - every ENV, EX, REG, FEAT and CON test completes
+- **34/36 tests pass** - every ENV, EX, REG, FEAT and CON test completes
   without error.
 - **INT-02 and INT-03 are RED BY DESIGN** and are the only accepted
   failures. They compare this package against sibling repos on disk and

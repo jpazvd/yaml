@@ -6,8 +6,8 @@ This folder contains QA protocols and scripts for validating the `yaml` Stata mo
 
 | Metric | Value |
 |--------|-------|
-| **Total Tests** | 35 |
-| **Test Families** | ENV (3), EX (3), REG (17), FEAT (9), INT (3) |
+| **Total Tests** | 36 |
+| **Test Families** | ENV (3), EX (3), REG (18), FEAT (9), INT (3) |
 | **Runner** | `qa/run_tests.do` |
 | **Log file** | `qa/logs/run_tests.log` (gitignored) |
 | **History** | `qa/test_history.txt` |
@@ -66,7 +66,7 @@ Runs example scripts to validate core workflows.
 | EX-02 | `examples/test_yaml_improvements.do` |
 | EX-03 | `examples/yaml_basic_examples.do` |
 
-### 3. Regression Tests (REG) - 17 tests
+### 3. Regression Tests (REG) - 18 tests
 Targeted regression tests for specific bug fixes. Every fixed bug gets a REG
 test that fails before the fix and passes after, so a regression cannot pass
 silently.
@@ -90,6 +90,7 @@ silently.
 | REG-15 | Generated harmonization do-file runs | BUG-13 |
 | REG-16 | Quote characters in values parse | BUG-14 |
 | REG-17 | Counterfactual: v2.0.0 fails, current passes | BUG-15 |
+| REG-18 | RR suite: 16 checks (RR-01…RR-16) from v2.0.0 validation | v2.0.0 |
 
 REG-17 is the pattern worth copying. It materialises the *previous* build from
 git history, asserts the bug still reproduces against it, and only then asserts
