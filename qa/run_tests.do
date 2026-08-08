@@ -51,6 +51,7 @@ foreach arg of local args {
 		di as text "  REG-15   generated harmonization do-file runs (BUG-13)"
 		di as text "  REG-16   quote characters in values parse (BUG-14)"
 		di as text "  REG-17   BUG-15 counterfactual (v2.0.0 fails, current passes)"
+		di as text "  REG-18   RR suite, 16 checks (RR-01..RR-16)"
 		di as text ""
 		di as text "  Feature Tests (v1.6.0):"
 		di as text "  FEAT-01  embedded double quotes via Mata st_sstore"
@@ -510,6 +511,7 @@ if "`target_test'" == "" | "`target_test'" == "REG-16" {
 	else {
 		test_fail, id("REG-16") msg("test_quotes_in_values.do failed (rc=`erc')")
 	}
+}
 
 * REG-17: BUG-15 counterfactual -- materializes v2.0.0 yaml_write from git,
 * proves the quote-bearing scalars() write fails there (198 abort, truncated
@@ -526,6 +528,30 @@ if "`target_test'" == "" | "`target_test'" == "REG-17" {
 		test_fail, id("REG-17") msg("test_bug15_counterfactual.do failed (rc=`erc')")
 	}
 }
+
+* REG-18: the RR regression suite (16 checks, RR-01..RR-16), covering
+* behaviors pinned down while validating v2.0.0. It is self-contained
+* and fail-fast: a bare -assert- aborts it at the first failure, so rc alone
+* is the verdict and the last "RR-nn ... OK" line in the log says how far it
+* got. Running it from here is what makes it part of every suite run rather
+* than a step someone has to remember.
+if "`target_test'" == "" | "`target_test'" == "REG-18" {
+	test_start, id("REG-18") desc("RR suite, 16 checks (RR-01..RR-16)")
+	capture quietly do "`qadir'/scripts/test_rr_regressions.do"
+	local erc = _rc
+	qui do "`qadir'/_define_helpers.do"
+	* The suite writes fixtures into the current directory and erases them on
+	* completion; an abort leaves them behind, so clear them either way.
+	foreach f in rr_fix1.yaml rr_fix2.yaml rr_fix3.yaml rr_fix4.yaml ///
+	             rr_fix1_out.yaml rr_fix2_out.yaml rr_fix3_out.yaml {
+		cap erase "`f'"
+	}
+	if `erc' == 0 {
+		test_pass, id("REG-18")
+	}
+	else {
+		test_fail, id("REG-18") msg("test_rr_regressions.do failed (rc=`erc')")
+	}
 }
 
 *===============================================================================
